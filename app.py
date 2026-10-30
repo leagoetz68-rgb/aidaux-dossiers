@@ -19,7 +19,7 @@ auth.proteger(app)
 
 AGENCES = ["Cronenbourg", "Vendenheim", "Personnel administratif"]
 PHASES = {"arrivee", "poste"}
-CHAMPS_JSON = ("docs", "classeur", "dates", "ech")
+CHAMPS_JSON = ("docs", "classeur", "dates", "ech", "vie")
 
 
 # ---- Base de données (même base Neon que les autres applis) ----
@@ -45,6 +45,10 @@ def init_db():
                     updated_by TEXT
                 )
                 """
+            )
+            # « La vie du salarié » : avenants, CSS, médecine, entretiens
+            cur.execute(
+                "ALTER TABLE dossiers_salaries ADD COLUMN IF NOT EXISTS vie JSONB NOT NULL DEFAULT '{}'::jsonb"
             )
             # Fil d'actualité affiché en haut de l'appli
             cur.execute(
