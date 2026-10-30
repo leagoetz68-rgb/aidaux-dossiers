@@ -285,6 +285,18 @@ a.ghost{text-decoration:none}
 .pill.st-warn[data-ed$="|medecine"]{background:#E3EEFB!important;color:#1F5FBF!important}
 .dots .dot:nth-child(3).st-warn{background:#1F5FBF!important}
 @media (prefers-color-scheme:dark){.pill.st-warn[data-ed$="|medecine"]{background:#16294A!important;color:#8DB8F5!important}.dots .dot:nth-child(3).st-warn{background:#8DB8F5!important}}
+
+.vcard{background:var(--card)!important;color:var(--ink)!important;text-decoration:none!important}
+.vcard h4,.vcard .cbx,.vcard label{color:var(--ink)!important;text-decoration:none!important}
+.vcard .v-fields label{color:var(--ink2)!important}
+
+/* date qui approche mais encore valide = à jour (vert), sauf médecine (bleu) */
+.vcard.st-warn{border-left-color:var(--ok)}
+.vcard.st-warn .v-st,.count.st-warn,.pill.st-warn,.acc-badge.st-warn{background:var(--ok-soft)!important;color:var(--ok)!important}
+.dot.st-warn{background:var(--ok)!important}
+.vcard.vc-medecine.st-warn{border-left-color:#1F5FBF}
+.vcard.vc-medecine.st-warn .v-st,.vc-medecine .count.st-warn,.pill.st-warn[data-ed$="|medecine"]{background:#E3EEFB!important;color:#1F5FBF!important}
+.dots .dot:nth-child(3).st-warn{background:#1F5FBF!important}
 </style>
 </head>
 <body data-user="{{ user_email }}">
@@ -540,9 +552,11 @@ function carteAvenants(a){
     <button class="btn light av-add" data-avadd>+ Ajouter un avenant</button>
   </article>`;
 }
+// Compte les 4 rubriques : avenants (tous signés ou aucun), CSS, médecine,
+// entretien. Une échéance encore valide (même si la date approche) est à jour.
 function vieScore(a){
   let ok=0,t=0;
-  VIE.forEach(([k,,,ek])=>{t++;const th=ECH.find(x=>x[0]===ek)[2],s=echStatus(a.ech[ek],th).k;if(s==="ok"||s==="nc")ok++});
+  VIE.forEach(([k,,,ek])=>{t++;const th=ECH.find(x=>x[0]===ek)[2],s=echStatus(a.ech[ek],th).k;if(s==="ok"||s==="nc"||s==="warn")ok++});
   t++;if(!a.vie.avenants.some(x=>!x.signe))ok++;
   return{ok,t};
 }
