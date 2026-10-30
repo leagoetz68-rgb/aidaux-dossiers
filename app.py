@@ -17,7 +17,7 @@ auth.init_auth_db()
 app.register_blueprint(auth.bp)
 auth.proteger(app)
 
-AGENCES = ["Cronenbourg", "Vendenheim"]
+AGENCES = ["Cronenbourg", "Vendenheim", "Personnel administratif"]
 PHASES = {"arrivee", "poste"}
 CHAMPS_JSON = ("docs", "classeur", "dates", "ech")
 
