@@ -58,6 +58,7 @@ a.ghost{text-decoration:none}
 .gauge p{margin:2px 0 0;color:var(--ink2);font-size:13px}
 .gauge.total{background:var(--navy);border-color:var(--navy);color:#fff}
 .gauge.total p{color:#C9D1F2}
+.bignum{font-family:"Baloo 2",sans-serif;font-weight:700;font-size:40px;min-width:72px;text-align:center;line-height:1}
 
 .feed{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;margin-bottom:18px;scrollbar-width:thin}
 .news{flex:none;max-width:290px;background:var(--card);border:1px solid var(--line);border-left:5px solid var(--teal);border-radius:0;padding:9px 12px;font-size:13px}
@@ -159,7 +160,7 @@ a.ghost{text-decoration:none}
     <a class="ghost" href="/logout" title="{{ user_email }}">Se déconnecter</a>
   </header>
 
-  <section class="hero" id="hero" aria-label="Avancement par agence"></section>
+  <section class="hero" id="hero" aria-label="Avancement de l’équipe"></section>
   <section class="feed" id="feed" aria-label="Fil d’actualité"></section>
 
   <nav class="bar-tabs" aria-label="Espaces">
@@ -254,12 +255,14 @@ function ring(pct,col,light){
   return `<svg width="72" height="72" viewBox="0 0 72 72" aria-hidden="true"><circle cx="36" cy="36" r="${r}" fill="none" stroke="${light?"rgba(255,255,255,.18)":"var(--gray-soft)"}" stroke-width="9"/><circle cx="36" cy="36" r="${r}" fill="none" stroke="${col}" stroke-width="9" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${off}" transform="rotate(-90 36 36)" style="transition:stroke-dashoffset .6s"/><text x="36" y="41" text-anchor="middle" font-family="Baloo 2,sans-serif" font-weight="700" font-size="16" fill="${light?"#fff":"var(--ink)"}">${pct}%</text></svg>`;
 }
 function renderHero(){
-  const g=ag=>{const a=S.arrivees.filter(p=>!ag||p.agence===ag),p=S.poste.filter(x=>!ag||x.agence===ag);const tot=a.length+p.length;const ok=p.filter(x=>!todo(x)).length;return{pct:tot?Math.round(ok/tot*100):100,ok,tot}};
-  const c=g("Cronenbourg"),v=g("Vendenheim"),t=g();
+  const tot=S.arrivees.length+S.poste.length,ok=S.poste.filter(x=>!todo(x)).length;
+  const pct=tot?Math.round(ok/tot*100):100;
+  const aT=S.poste.filter(todo).length+S.arrivees.length;
+  let rdv=0;S.poste.forEach(p=>ECH.forEach(([k])=>{const e=p.ech[k];if(e.rdv&&days(e.rdv)>=0)rdv++}));
   document.getElementById("hero").innerHTML=
-   `<div class="gauge">${ring(c.pct,"var(--teal)")}<div><h3>Cronenbourg</h3><p>${c.ok} dossier${c.ok>1?"s":""} sur ${c.tot} à jour</p></div></div>
-    <div class="gauge">${ring(v.pct,"var(--coral)")}<div><h3>Vendenheim</h3><p>${v.ok} dossier${v.ok>1?"s":""} sur ${v.tot} à jour</p></div></div>
-    <div class="gauge total">${ring(t.pct,"var(--teal)",true)}<div><h3>Toute l’équipe</h3><p>${t.pct===100?"Tout est en règle, bravo":"Objectif : 100 %"}</p></div></div>`;
+   `<div class="gauge total">${ring(pct,"var(--teal)",true)}<div><h3>Toute l’équipe</h3><p>${ok} dossier${ok>1?"s":""} sur ${tot} à jour${pct===100?", bravo":""}</p></div></div>
+    <div class="gauge"><div class="bignum" style="color:var(--coral)">${aT}</div><div><h3>À traiter</h3><p>Échéances proches, expirées ou à renseigner, et dossiers d’embauche en cours</p></div></div>
+    <div class="gauge"><div class="bignum" style="color:var(--rdv)">${rdv}</div><div><h3>RDV à venir</h3><p>Médecine du travail et entretiens déjà planifiés</p></div></div>`;
 }
 function renderFeed(){
   const el=document.getElementById("feed");
@@ -270,7 +273,7 @@ function renderTabs(){
   const nA=S.arrivees.length,nP=S.poste.filter(todo).length;
   const a=document.getElementById("nA"),p=document.getElementById("nP");
   a.textContent=nA;a.style.display=nA?"":"none";p.textContent=nP;p.style.display=nP?"":"none";
-  document.getElementById("filters").innerHTML=["Toutes",...AGENCES].map(x=>`<button class="chip" data-ag="${x}" aria-pressed="${UI.agence===x}">${x}</button>`).join(" ");
+  document.getElementById("filters").innerHTML="";
 }
 function renderAdd(){
   const z=document.getElementById("addZone");
@@ -278,7 +281,6 @@ function renderAdd(){
   z.innerHTML=`<div class="detail" style="margin-bottom:14px"><h3 style="font-size:20px;margin-bottom:10px">Ajouter un salarié</h3>
    <div class="dates">
     <label>Nom et prénom<input id="fNom" placeholder="DUPONT Marie" autocomplete="off"></label>
-    <label>Agence<select id="fAg">${AGENCES.map(a=>`<option>${a}</option>`).join("")}</select></label>
     <label>Date d’embauche<input type="date" id="fEmb"></label>
    </div>
    <div class="sub" role="radiogroup" aria-label="Où le placer">
@@ -295,7 +297,7 @@ function viewArrivees(){
   const l=byAg(S.arrivees);
   if(!l.length)return `<div class="empty"><h3>Aucune arrivée en cours</h3>Ajoutez un nouveau salarié pour suivre son dossier d’embauche.</div>`;
   return `<div class="grid">${l.map(a=>{const p=progress(a);return `<button class="pcard" data-open="${a.id}">
-    <div class="who"><div class="av ${a.agence==="Vendenheim"?"v":""}">${initials(a.nom)}</div><div><b>${esc(a.nom)}</b><span>${a.agence}${a.embauche?", embauché(e) le "+fmt(a.embauche):""}</span></div></div>
+    <div class="who"><div class="av">${initials(a.nom)}</div><div><b>${esc(a.nom)}</b><span>${a.embauche?"Embauché(e) le "+fmt(a.embauche):"&nbsp;"}</span></div></div>
     <div class="prog"><i class="pv" style="width:${p.v/p.t*100}%"></i><i class="pr" style="width:${p.r/p.t*100}%"></i></div>
     <div class="progtxt"><span>${p.r?p.r+" à vérifier":"&nbsp;"}</span><span><b>${p.v}</b> / ${p.t}</span></div></button>`}).join("")}</div>`;
 }
@@ -309,7 +311,7 @@ function docRow(a,k,lab){
 function detail(a){
   const p=progress(a);
   return `<div class="detail">
-   <div class="dhead"><button class="ghost" data-back>← Retour</button><div class="av ${a.agence==="Vendenheim"?"v":""}">${initials(a.nom)}</div><div style="flex:1"><h2>${esc(a.nom)}</h2><span style="color:var(--ink2);font-size:13px">${a.agence}${a.embauche?", embauché(e) le "+fmt(a.embauche):""}</span></div><b style="font-family:'Baloo 2';font-size:22px">${p.v} / ${p.t}</b></div>
+   <div class="dhead"><button class="ghost" data-back>← Retour</button><div class="av">${initials(a.nom)}</div><div style="flex:1"><h2>${esc(a.nom)}</h2><span style="color:var(--ink2);font-size:13px">${a.embauche?"Embauché(e) le "+fmt(a.embauche):""}</span></div><b style="font-family:'Baloo 2';font-size:22px">${p.v} / ${p.t}</b></div>
    <div class="prog"><i class="pv" style="width:${p.v/p.t*100}%"></i><i class="pr" style="width:${p.r/p.t*100}%"></i></div>
    <div class="legend">Touchez un statut pour avancer : <span class="sbtn st-manquant">Manquant</span><span class="sbtn st-recu">Reçu</span><span class="sbtn st-verifie">Vérifié</span></div>
    <div class="sec"><h3>Documents obligatoires</h3>${DOCS_OBL.map(([k,l])=>docRow(a,k,l)).join("")}</div>
@@ -329,7 +331,7 @@ function viewPoste(){
   if(!l.length)return sw+`<div class="empty"><h3>Rien à traiter</h3>Toutes les échéances sont à jour. Les salariés réapparaîtront ici quand une date approchera.</div>`;
   l=l.slice().sort((x,y)=>score(x)-score(y));
   return sw+`<div class="rows">${l.map(p=>`<div class="row"><div class="row-main">
-    <div class="who"><div class="av ${p.agence==="Vendenheim"?"v":""}">${initials(p.nom)}</div><div><b>${esc(p.nom)}</b><span>${p.agence}</span></div></div>
+    <div class="who"><div class="av">${initials(p.nom)}</div><div><b>${esc(p.nom)}</b><span>${p.embauche?"Embauché(e) le "+fmt(p.embauche):"&nbsp;"}</span></div></div>
     <div class="pills">${ECH.map(([k,l,th])=>{const s=echStatus(p.ech[k],th);const op=UI.editor&&UI.editor.id===p.id&&UI.editor.k===k;return `<button class="pill st-${s.k} ${op?"open":""}" data-ed="${p.id}|${k}" aria-expanded="${op}">${l}<small>${s.t}${s.s?", "+s.s:""}</small></button>`}).join("")}</div></div>
     ${UI.editor&&UI.editor.id===p.id?editor(p,UI.editor.k):""}</div>`).join("")}</div>
     <p class="note">Alertes : 3 mois avant pour la pièce d’identité, 1 mois pour l’attestation CPAM, 2 mois pour la médecine du travail et l’entretien individuel.</p>`;
@@ -373,7 +375,7 @@ document.addEventListener("click",async ev=>{
   if(t.dataset.ph){document.querySelectorAll("[data-ph]").forEach(b=>b.setAttribute("aria-pressed",b===t));return}
   if(t.id==="fCancel"){UI.adding=false;return render()}
   if(t.id==="fOk"){
-    const nom=document.getElementById("fNom").value.trim(),agence=document.getElementById("fAg").value,embauche=document.getElementById("fEmb").value;
+    const nom=document.getElementById("fNom").value.trim(),agence=AGENCES[0],embauche=document.getElementById("fEmb").value;
     const phase=document.querySelector('[data-ph][aria-pressed="true"]').dataset.ph;
     if(!nom){document.getElementById("fErr").textContent="Indiquez le nom et le prénom";return}
     t.disabled=true;
