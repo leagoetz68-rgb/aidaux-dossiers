@@ -208,6 +208,61 @@ a.ghost{text-decoration:none}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 
+
+/* ---- lignes dépliables ---- */
+.acc-h{display:flex;align-items:center;gap:14px;width:100%;text-align:left;margin-top:16px;padding:14px 16px;border:1px solid var(--line);border-radius:16px;background:var(--card);cursor:pointer;transition:box-shadow .2s,transform .1s}
+.acc-h:hover{box-shadow:0 4px 16px rgba(27,42,107,.08)}
+.acc-h:active{transform:scale(.995)}
+.acc-h.open{border-bottom-left-radius:4px;border-bottom-right-radius:4px}
+.acc-ico{font-size:26px;width:44px;height:44px;border-radius:12px;background:var(--gray-soft);display:grid;place-items:center;flex:none}
+.acc-t{flex:1;min-width:0}.acc-t b{display:block;font-size:16.5px;font-family:'Baloo 2',sans-serif}.acc-t small{color:var(--ink2);font-size:12.5px}
+.acc-badge{font-family:'Baloo 2',sans-serif;font-weight:700;font-size:15px;padding:4px 12px;border-radius:99px}
+.acc-badge.st-ok{background:var(--ok-soft);color:var(--ok)}.acc-badge.st-bad{background:var(--bad-soft);color:var(--bad)}
+.acc-chev{font-size:24px;color:var(--ink2);transition:transform .25s;line-height:1}
+.acc-h.open .acc-chev{transform:rotate(90deg)}
+.acc-body{border:1px solid var(--line);border-top:none;border-radius:0 0 16px 16px;padding:4px 14px 14px;animation:accIn .25s ease}
+.acc-body .sec.dossier{margin-top:8px}
+@keyframes accIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+/* ---- la vie du salarié ---- */
+.vie-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-top:12px}
+.vcard{border:1px solid var(--line);border-left:6px solid var(--line);border-radius:14px;padding:12px 14px;background:var(--card);display:flex;flex-direction:column;gap:10px;transition:box-shadow .3s}
+.vcard.wide{grid-column:1/-1}
+.vcard.st-ok,.vcard.st-nc{border-left-color:var(--ok)}
+.vcard.st-bad,.vcard.st-vide,.vcard.st-rdv,.vcard.st-warn{border-left-color:var(--bad)}
+.vcard.vc-medecine.st-warn{border-left-color:#1F5FBF}
+.vcard.flash{box-shadow:0 0 0 4px color-mix(in srgb,var(--ink2) 35%,transparent)}
+.vcard header{display:flex;align-items:center;gap:8px}
+.vcard h4{margin:0;font-size:15px;flex:1}
+.v-ico{font-size:20px}
+.v-st{font-size:12px;font-weight:700;padding:3px 9px;border-radius:99px}
+.vcard.st-ok .v-st,.vcard.st-nc .v-st{background:var(--ok-soft);color:var(--ok)}
+.vcard.st-bad .v-st,.vcard.st-vide .v-st,.vcard.st-rdv .v-st,.vcard.st-warn .v-st{background:var(--bad-soft);color:var(--bad)}
+.vcard.vc-medecine.st-warn .v-st{background:#E3EEFB;color:#1F5FBF}
+.v-body{display:flex;gap:14px;align-items:center}
+.count{min-width:96px;text-align:center;padding:8px 6px;border-radius:12px}
+.count b{display:block;font-family:'Baloo 2',sans-serif;font-size:30px;line-height:1}
+.count small{font-size:11px}
+.count.st-ok,.count.st-nc{background:var(--ok-soft);color:var(--ok)}
+.count.st-bad,.count.st-vide,.count.st-rdv,.count.st-warn{background:var(--bad-soft);color:var(--bad)}
+.vc-medecine .count.st-warn{background:#E3EEFB;color:#1F5FBF}
+.v-fields{display:flex;flex-direction:column;gap:6px;flex:1}
+.v-fields label{display:flex;flex-direction:column;font-size:12px;color:var(--ink2);gap:2px}
+.v-fields input{border:1px solid var(--line);border-radius:8px;padding:6px 8px;background:var(--bg);font:inherit;color:var(--ink)}
+.rdvrow{display:flex;gap:4px}.rdvrow input{flex:1}
+.v-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.v-com{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--bg);font:inherit;font-size:13px;resize:vertical;color:var(--ink)}
+.x{border:1px solid var(--line);background:var(--card);border-radius:8px;width:30px;height:30px;font-size:18px;line-height:1;color:var(--ink2);cursor:pointer;flex:none}
+.x:hover{color:var(--bad);border-color:var(--bad)}
+.av-list{display:flex;flex-direction:column;gap:6px}
+.av-l{display:grid;grid-template-columns:150px 1fr auto auto;gap:8px;align-items:center;padding:6px;border-radius:10px;background:var(--bad-soft)}
+.av-l.is-ok{background:var(--ok-soft)}
+.av-l input[type=date]{border:1px solid var(--line);border-radius:8px;padding:6px 8px;background:var(--card);font:inherit;color:var(--ink)}
+.av-l .com{border:1px solid var(--line);border-radius:8px;padding:6px 9px;background:var(--card);font-size:13px;width:100%}
+.v-empty{color:var(--ink2);font-size:13px;margin:0}
+.av-add{align-self:flex-start}
+@media (max-width:600px){.av-l{grid-template-columns:1fr auto}.av-l .com{grid-column:1/-1}.v-body{flex-direction:column;align-items:stretch}}
+@media (prefers-color-scheme:dark){.vcard.vc-medecine.st-warn .v-st,.vc-medecine .count.st-warn{background:#16294A;color:#8DB8F5}}
+@media (prefers-reduced-motion:reduce){.acc-body{animation:none}.acc-chev{transition:none}}
 /* ==== Couleurs : uniquement VERT = fait, ROUGE = pas fait ==== */
 .pill.st-ok,.pill.st-nc{background:var(--ok-soft)!important;color:var(--ok)!important;border-color:transparent!important;text-decoration:none!important}
 .pill.st-warn,.pill.st-bad,.pill.st-rdv,.pill.st-vide{background:var(--bad-soft)!important;color:var(--bad)!important;border-color:transparent!important}
@@ -286,7 +341,7 @@ const STATUS_LAB={manquant:"Manquant",recu:"Reçu",verifie:"Vérifié",nc:"Non c
 const labelOf=k=>([...DOCS_OBL,...DOCS_SIGN].find(x=>x[0]===k)||[,k])[1];
 
 let S={arrivees:[],poste:[],feed:[]},LOADED=false,ERR="";
-let UI={tab:"arrivees",agence:"Toutes",open:null,editor:null,onlyTodo:true,adding:false,addErr:""};
+let UI={acc:{admin:false,vie:false},tab:"arrivees",agence:"Toutes",open:null,editor:null,onlyTodo:true,adding:false,addErr:""};
 
 function norm(p){
   p.docs=p.docs||{};[...DOCS_OBL,...DOCS_SIGN].forEach(([k])=>{if(!p.docs[k])p.docs[k]={s:"manquant",c:""}});
@@ -295,6 +350,8 @@ function norm(p){
   p.classeur=p.classeur||{};CLASSEUR.forEach(([k])=>{p.classeur[k]=!!p.classeur[k]});
   p.dates=p.dates||{};DATES.forEach(([k])=>{p.dates[k]=p.dates[k]||""});
   p.ech=p.ech||{};ECH.forEach(([k])=>{p.ech[k]=p.ech[k]||{date:"",rdv:""}});
+  p.vie=p.vie||{};p.vie.avenants=Array.isArray(p.vie.avenants)?p.vie.avenants:[];
+  VIE.forEach(([k])=>{p.vie[k]=p.vie[k]||{fait:false,c:""}});
   p.id=String(p.id);return p;
 }
 
@@ -313,7 +370,7 @@ async function load(){
 }
 let chain=Promise.resolve();
 function push(p,news){
-  const body={docs:p.docs,classeur:p.classeur,dates:p.dates,ech:p.ech,phase:p.phase};
+  const body={docs:p.docs,classeur:p.classeur,dates:p.dates,ech:p.ech,vie:p.vie,phase:p.phase};
   if(news)body.news=news;
   chain=chain.then(()=>api("/api/salaries/"+p.id,{method:"PUT",body:JSON.stringify(body)}))
     .then(j=>{if(j&&j.feed){S.feed=j.feed;renderFeed()}})
@@ -432,6 +489,71 @@ function ligneDoc(a,k,lab){
     <div class="t-nc"><button class="nc" data-nc="${k}" aria-pressed="${nc}" title="Non concerné">N/C</button></div>
   </div>`;
 }
+
+// ---- « La vie du salarié » ----
+const VIE=[["css","🧾","Attestation CSS","cpam"],["medecine","🩺","Visite médecine du travail","medecine"],["entretien","💬","Entretien annuel","entretien"]];
+VIE.forEach(v=>{v[2]=v[2]}); // libellés
+function accHead(k,ico,titre,sous,badge,st){
+  const op=!!UI.acc[k];
+  return `<button class="acc-h ${op?"open":""}" data-acc="${k}" aria-expanded="${op}">
+    <span class="acc-ico" aria-hidden="true">${ico}</span>
+    <span class="acc-t"><b>${titre}</b><small>${sous}</small></span>
+    <span class="acc-badge st-${st}">${badge}</span><span class="acc-chev" aria-hidden="true">›</span></button>`;
+}
+function compte(e,th){
+  if(e.nc)return{n:"—",u:"non concerné",k:"nc"};
+  if(e.rdv){const d=days(e.rdv);return{n:d>=0?"J-"+d:"J+"+(-d),u:"avant le RDV du "+fmt(e.rdv),k:"rdv"}}
+  if(!e.date)return{n:"?",u:"date à renseigner",k:"vide"};
+  const d=days(e.date);
+  if(d<0)return{n:"+"+(-d)+" j",u:"de retard",k:"bad"};
+  return{n:d,u:d>1?"jours restants":"jour restant",k:d<=th?"warn":"ok"};
+}
+function carteEch(a,k,ico,titre,ek){
+  const th=ECH.find(x=>x[0]===ek)[2],e=a.ech[ek],v=a.vie[k],st=echStatus(e,th),c=compte(e,th);
+  const faitLab=k==="css"?"Attestation reçue":(k==="medecine"?"Visite faite":"Entretien fait");
+  return `<article class="vcard st-${st.k} vc-${k}" id="vie-${ek}">
+    <header><span class="v-ico" aria-hidden="true">${ico}</span><h4>${titre}</h4><span class="v-st">${st.t}</span></header>
+    <div class="v-body">
+      <div class="count st-${c.k}"><b>${c.n}</b><small>${c.u}</small></div>
+      <div class="v-fields">
+        <label>${k==="css"?"Valable jusqu’au":"Prochaine échéance"}<input type="date" data-echd="${ek}|date" value="${e.date||""}" ${e.nc?"disabled":""}></label>
+        ${k==="css"?"":`<label>RDV pris le<span class="rdvrow"><input type="date" data-echd="${ek}|rdv" value="${e.rdv||""}" ${e.nc?"disabled":""}>${e.rdv?`<button class="x" data-vunrdv="${ek}" title="Retirer le RDV" aria-label="Retirer le RDV">×</button>`:""}</span></label>`}
+      </div>
+    </div>
+    <div class="v-row">${cb(`data-vief="${k}"`,v.fait,faitLab+(v.fait&&v.le?` <small>(${fmt(v.le)})</small>`:""),e.nc)}
+      <button class="nc" data-vnc="${ek}" aria-pressed="${!!e.nc}">N/C</button></div>
+    <textarea class="v-com" data-viec="${k}" rows="2" placeholder="Commentaire…" aria-label="Commentaire ${titre}">${esc(v.c)}</textarea>
+  </article>`;
+}
+function carteAvenants(a){
+  const L=a.vie.avenants,ns=L.filter(x=>!x.signe).length;
+  const st=ns?"bad":"ok";
+  const lignes=L.length?L.map((av,i)=>`<div class="av-l ${av.signe?"is-ok":""}">
+      <input type="date" data-av="${i}|date" value="${av.date||""}" aria-label="Date de l’avenant">
+      <input class="com" data-av="${i}|c" value="${esc(av.c)}" placeholder="Objet : heures, poste, durée…" aria-label="Objet de l’avenant">
+      ${cb(`data-av="${i}|signe"`,av.signe,"Signé")}
+      <button class="x" data-avdel="${i}" title="Supprimer" aria-label="Supprimer cet avenant">×</button></div>`).join("")
+    :`<p class="v-empty">Aucun avenant pour l’instant.</p>`;
+  return `<article class="vcard vc-av st-${st} wide" id="vie-avenants">
+    <header><span class="v-ico" aria-hidden="true">✍️</span><h4>Avenants</h4><span class="v-st">${L.length?(ns?ns+" à faire signer":"Tous signés"):"Aucun"}</span></header>
+    <div class="av-list">${lignes}</div>
+    <button class="btn light av-add" data-avadd>+ Ajouter un avenant</button>
+  </article>`;
+}
+function vieScore(a){
+  let ok=0,t=0;
+  VIE.forEach(([k,,,ek])=>{t++;const th=ECH.find(x=>x[0]===ek)[2],s=echStatus(a.ech[ek],th).k;if(s==="ok"||s==="nc")ok++});
+  t++;if(!a.vie.avenants.some(x=>!x.signe))ok++;
+  return{ok,t};
+}
+function vieSection(a){
+  const sc=vieScore(a);
+  return `${accHead("vie","🌱","La vie du salarié","Avenants, attestation CSS, médecine du travail, entretiens",`${sc.ok} / ${sc.t}`,sc.ok===sc.t?"ok":"bad")}
+   <div class="acc-body" ${UI.acc.vie?"":"hidden"}><div class="vie-grid">
+     ${carteAvenants(a)}
+     ${VIE.map(([k,ico,t,ek])=>carteEch(a,k,ico,t,ek)).join("")}
+   </div></div>`;
+}
 function fiche(a){
   const p=progress(a);
   const nCl=CLASSEUR.filter(([k])=>a.classeur[k]).length;
@@ -445,7 +567,8 @@ function fiche(a){
 
    <div class="sec"><h3>Échéances</h3><div class="pills">${pills}</div>${UI.editor&&UI.editor.id===a.id?editor(a,UI.editor.k):""}</div>
 
-   <div class="sec dossier"><h3>Dossier administratif du salarié</h3>
+   ${accHead("admin","🗂️","Dossier administratif obligatoire","Pièces, signatures, classeur et Digiposte",`${p.v} / ${p.t}`,p.v===p.t?"ok":"bad")}
+   <div class="acc-body" ${UI.acc.admin?"":"hidden"}><div class="sec dossier">
      <div class="dates" style="margin-bottom:6px"><label>Date du dossier<input type="date" data-date="dossier" value="${a.dates.dossier||""}"></label></div>
      <h4>Documents obligatoires <small>présents dans le dossier</small></h4>
      <div class="table">${thead}${DOCS_OBL.map(([k,l])=>ligneDoc(a,k,l)).join("")}</div>
@@ -457,7 +580,8 @@ function fiche(a){
      <h4>Digiposte</h4>
      <div class="dates">${DATES.map(([k,l])=>`<label>${l}<input type="date" data-date="${k}" value="${a.dates[k]||""}"></label>`).join("")}</div>
      <p class="note">Les cases sont enregistrées dès qu’on les coche. « Vérifié » coche aussi « Présent ».</p>
-   </div>
+   </div></div>
+   ${vieSection(a)}
    <div class="sec" style="text-align:right"><button class="ghost" data-retirer="${a.id}">Retirer ce salarié (départ)</button></div>
   </div>`;
 }
@@ -519,6 +643,13 @@ document.addEventListener("click",async ev=>{
   }
   if(t.dataset.nc&&a){const d=a.docs[t.dataset.nc];d.s=d.s==="nc"?"manquant":"nc";render();if(!checkDone(a))push(a);return}
   if(t.dataset.only){UI.onlyTodo=t.dataset.only==="1";return render()}
+  if(t.dataset.acc){UI.acc[t.dataset.acc]=!UI.acc[t.dataset.acc];return render()}
+  if(t.dataset.ed&&!t.dataset.ed.endsWith("|piece")){const k=t.dataset.ed.split("|")[1];UI.acc.vie=true;UI.editor=null;render();
+    const el=document.getElementById("vie-"+k);if(el){el.scrollIntoView({behavior:"smooth",block:"center"});el.classList.add("flash");setTimeout(()=>el.classList.remove("flash"),1200)}return}
+  if(a&&t.dataset.avadd!==undefined){a.vie.avenants.unshift({date:"",c:"",signe:false});render();push(a);return}
+  if(a&&t.dataset.avdel!==undefined){const i=+t.dataset.avdel;if(!confirm("Supprimer cet avenant ?"))return;a.vie.avenants.splice(i,1);render();push(a);return}
+  if(a&&t.dataset.vnc){const e=a.ech[t.dataset.vnc];e.nc=!e.nc;render();push(a);return}
+  if(a&&t.dataset.vunrdv){a.ech[t.dataset.vunrdv].rdv="";render();push(a);return}
   if(t.dataset.ed){const [id,k]=t.dataset.ed.split("|");UI.editor=(UI.editor&&UI.editor.id===id&&UI.editor.k===k)?null:{id,k};return render()}
   if(UI.editor&&(t.hasAttribute("data-save")||t.hasAttribute("data-rdv")||t.hasAttribute("data-unrdv")||t.hasAttribute("data-ncech"))){
     const p=find(UI.editor.id),k=UI.editor.k,e=p.ech[k],l=ECH.find(x=>x[0]===k)[1];let news=null;
@@ -532,6 +663,16 @@ document.addEventListener("click",async ev=>{
 document.addEventListener("change",ev=>{
   const t=ev.target,a=UI.open&&find(UI.open);if(!a)return;
   if(t.dataset.com){a.docs[t.dataset.com].c=t.value;push(a);return}
+  if(t.dataset.viec){a.vie[t.dataset.viec].c=t.value;push(a);return}
+  if(t.dataset.vief){const k=t.dataset.vief,v=a.vie[k];v.fait=t.checked;v.le=t.checked?new Date().toISOString().slice(0,10):"";
+    let news=null;
+    if(t.checked&&(k==="medecine"||k==="entretien")){a.ech[k].rdv="";const l=VIE.find(x=>x[0]===k)[2];news={txt:l+" faite pour "+a.nom};toast("Bravo 🎉 Pensez à noter la prochaine échéance");}
+    render();push(a,news);return}
+  if(t.dataset.echd){const [k,f]=t.dataset.echd.split("|"),e=a.ech[k];e[f]=t.value;if(f==="date"&&t.value){e.nc=false;if(a.vie[k])a.vie[k].fait=false}
+    let news=null;const l=ECH.find(x=>x[0]===k)[1];
+    if(f==="rdv"&&t.value)news={txt:"RDV "+l.toLowerCase()+" pour "+a.nom+" le "+fmt(t.value),c:"coral"};
+    render();push(a,news);return}
+  if(t.dataset.av){const [i,f]=t.dataset.av.split("|"),av=a.vie.avenants[+i];if(!av)return;av[f]=f==="signe"?t.checked:t.value;render();push(a);return}
   if(t.dataset.date){a.dates[t.dataset.date]=t.value;render();if(!checkDone(a))push(a);return}
   let coche=false;
   if(t.dataset.pres){const d=a.docs[t.dataset.pres];d.s=t.checked?(d.s==="verifie"?"verifie":"recu"):"manquant";coche=true}
