@@ -185,7 +185,7 @@ const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&g
 const initials=n=>n.trim().split(/\s+/).map(x=>x[0]).slice(0,2).join("").toUpperCase();
 const first=n=>n.trim().split(/\s+/).slice(-1)[0];
 
-const AGENCES=["Cronenbourg","Vendenheim"];
+const AGENCES=["Cronenbourg","Vendenheim","Personnel administratif"];
 const DOCS_OBL=[["piece","Pièce d’identité"],["vitale","Carte vitale"],["dpae","DPAE"],["cpam","Attestation CPAM"],["rib","RIB"],["permis","Permis de conduire"],["grise","Carte grise"],["assurance","Attestation assurance voiture"],["diplomes","Diplômes"],["formations","Attestations de formations"],["employeurs","Attestations employeurs"],["cv","CV / DCC / test"]];
 const DOCS_SIGN=[["contrat","Contrat de travail"],["mutuelle","Mutuelle"]];
 const CLASSEUR=[["duerp","DUERP"],["rqth","RQTH"],["confiance","Personne de confiance"],["digiposte","Consentement Digiposte"],["image","Droit à l’image"],["resto","Carte restaurant"],["reception","Attestation réception et engagement"],["casier","Visibilité du casier n°3"]];
@@ -231,8 +231,9 @@ function push(p,news){
 }
 
 function echStatus(e,th){
+  if(e&&e.nc)return{k:"nc",t:"Non concerné",s:""};
+  if(e&&e.rdv)return{k:"rdv",t:"RDV le "+fmt(e.rdv),s:e.date?"valide jusqu’au "+fmt(e.date):""};
   if(!e||!e.date)return{k:"vide",t:"À renseigner",s:""};
-  if(e.rdv)return{k:"rdv",t:"RDV le "+fmt(e.rdv),s:"valide jusqu’au "+fmt(e.date)};
   const d=days(e.date);
   if(d<0)return{k:"bad",t:"Expiré",s:"depuis "+(-d)+" j"};
   if(d<=th)return{k:"warn",t:"Dans "+d+" j",s:"le "+fmt(e.date)};
@@ -319,7 +320,7 @@ function detail(a){
    <div class="sec" style="text-align:right"><button class="ghost" data-retirer="${a.id}">Retirer ce salarié (départ)</button></div>
   </div>`;
 }
-function score(p){let m=9999;ECH.forEach(([k])=>{const e=p.ech[k];if(!e.date)m=Math.min(m,-999);else if(!e.rdv)m=Math.min(m,days(e.date))});return m}
+function score(p){let m=9999;ECH.forEach(([k])=>{const e=p.ech[k];if(e.nc||e.rdv)return;if(!e.date)m=Math.min(m,-999);else m=Math.min(m,days(e.date))});return m}
 function viewPoste(){
   let l=byAg(S.poste);
   const nTodo=l.filter(todo).length;
@@ -339,6 +340,7 @@ function editor(p,k){
    <label>Nouvelle date de validité<input type="date" id="edDate" value="${e.date||""}"></label><button class="btn teal" data-save>Enregistrer</button>
    <label>RDV pris le<input type="date" id="edRdv" value="${e.rdv||""}"></label><button class="btn light" data-rdv>Noter le RDV</button>
    ${e.rdv?`<button class="btn light" data-unrdv>Retirer le RDV</button>`:""}
+   <button class="nc" data-ncech aria-pressed="${!!e.nc}">Non concerné</button>
    <span style="flex:1"></span><button class="ghost" data-retirer="${p.id}">Retirer ce salarié (départ)</button></div>`;
 }
 
@@ -394,11 +396,12 @@ document.addEventListener("click",async ev=>{
   if(t.dataset.cl&&a){a.classeur[t.dataset.cl]=!a.classeur[t.dataset.cl];render();if(!checkDone(a))push(a);return}
   if(t.dataset.only){UI.onlyTodo=t.dataset.only==="1";UI.editor=null;return render()}
   if(t.dataset.ed){const [id,k]=t.dataset.ed.split("|");UI.editor=(UI.editor&&UI.editor.id===id&&UI.editor.k===k)?null:{id,k};return render()}
-  if(UI.editor&&(t.hasAttribute("data-save")||t.hasAttribute("data-rdv")||t.hasAttribute("data-unrdv"))){
+  if(UI.editor&&(t.hasAttribute("data-save")||t.hasAttribute("data-rdv")||t.hasAttribute("data-unrdv")||t.hasAttribute("data-ncech"))){
     const p=S.poste.find(x=>x.id===UI.editor.id),k=UI.editor.k,e=p.ech[k],l=ECH.find(x=>x[0]===k)[1];let news=null;
-    if(t.hasAttribute("data-save")){const v=document.getElementById("edDate").value;if(!v)return toast("Choisissez une date de validité");e.date=v;e.rdv="";news={txt:l+" de "+p.nom+" à jour jusqu’au "+fmt(v)};toast(l+" de "+first(p.nom)+" à jour")}
+    if(t.hasAttribute("data-save")){const v=document.getElementById("edDate").value;if(!v)return toast("Choisissez une date de validité");e.date=v;e.rdv="";e.nc=false;news={txt:l+" de "+p.nom+" à jour jusqu’au "+fmt(v)};toast(l+" de "+first(p.nom)+" à jour")}
     if(t.hasAttribute("data-rdv")){const v=document.getElementById("edRdv").value;if(!v)return toast("Choisissez la date du RDV");e.rdv=v;news={txt:"RDV "+l.toLowerCase()+" pour "+p.nom+" le "+fmt(v),c:"coral"};toast("RDV noté")}
     if(t.hasAttribute("data-unrdv")){e.rdv=""}
+    if(t.hasAttribute("data-ncech")){e.nc=!e.nc}
     UI.editor=null;render();push(p,news);return;
   }
 });
