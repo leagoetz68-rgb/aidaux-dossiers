@@ -37,12 +37,18 @@ h1,h2,h3{font-family:"Baloo 2","Trebuchet MS",sans-serif;font-weight:700;margin:
 button,input,select{font:inherit;color:inherit}
 button{cursor:pointer}
 :focus-visible{outline:3px solid var(--teal);outline-offset:2px}
-.wrap{max-width:1040px;margin:0 auto;padding:20px 16px 60px}
-header.top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:18px}
-.logo{width:46px;height:46px;border-radius:14px;background:var(--navy);display:grid;place-items:center;color:#fff;font-family:"Baloo 2",sans-serif;font-weight:700;font-size:20px}
+.appbar{background:linear-gradient(120deg,#1B2A6B 0%,#000F9F 100%);color:#fff;padding:18px 0 4px}
+.appbar .inner,.wrap{max-width:1440px;margin:0 auto;padding-left:28px;padding-right:28px}
+.wrap{padding-top:20px;padding-bottom:60px}
+.top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+.logo{width:46px;height:46px;border-radius:14px;background:#fff;display:grid;place-items:center;color:var(--navy);font-family:"Baloo 2",sans-serif;font-weight:700;font-size:20px}
 .logo span{color:var(--teal)}
-.top h1{font-size:26px}
-.top p{margin:0;color:var(--ink2);font-size:14px}
+.top h1{font-size:26px;color:#fff}
+.top p{margin:0;color:#C9D1F2;font-size:14px}
+.who-me{color:#C9D1F2;font-size:13px}
+.appbar .ghost{color:#fff;border-color:rgba(255,255,255,.35)}
+.appbar .ghost:hover{border-color:#fff}
+.logoimg{background:#fff;border-radius:12px;padding:3px}
 .top .grow{flex:1}
 .logoimg{height:46px;width:auto}
 a.ghost{text-decoration:none}
@@ -51,19 +57,19 @@ a.ghost{text-decoration:none}
 .ghost{background:none;border:1px solid var(--line);border-radius:10px;padding:7px 12px;color:var(--ink2);font-size:13px}
 .ghost:hover{border-color:var(--ink2)}
 
-.hero{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:16px}
-.gauge{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;display:flex;align-items:center;gap:14px}
+.hero{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:14px}
+.gauge{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);border-radius:20px;padding:16px;display:flex;align-items:center;gap:14px;color:#fff}
 .gauge svg{flex:none}
 .gauge h3{font-size:18px}
-.gauge p{margin:2px 0 0;color:var(--ink2);font-size:13px}
-.gauge.total{background:var(--navy);border-color:var(--navy);color:#fff}
+.gauge p{margin:2px 0 0;color:#C9D1F2;font-size:13px}
+.gauge.total{background:rgba(19,179,179,.18);border-color:rgba(19,179,179,.5);color:#fff}
 .gauge.total p{color:#C9D1F2}
 .bignum{font-family:"Baloo 2",sans-serif;font-weight:700;font-size:40px;min-width:72px;text-align:center;line-height:1}
 
-.feed{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;margin-bottom:18px;scrollbar-width:thin}
-.news{flex:none;max-width:290px;background:var(--card);border:1px solid var(--line);border-left:5px solid var(--teal);border-radius:0;padding:9px 12px;font-size:13px}
+.feed{display:flex;gap:10px;overflow-x:auto;padding-bottom:14px;scrollbar-width:thin}
+.news{flex:none;max-width:300px;background:rgba(255,255,255,.08);color:#fff;border:none;border-left:4px solid var(--teal);border-radius:0;padding:9px 12px;font-size:13px}
 .news.coral{border-left-color:var(--coral)}
-.news small{display:block;color:var(--ink2);font-size:12px}
+.news small{display:block;color:#C9D1F2;font-size:12px}
 
 .bar-tabs{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
 .tab{border:none;background:var(--card);border-radius:999px;padding:9px 16px;font-weight:700;color:var(--ink2);border:1px solid var(--line)}
@@ -149,20 +155,23 @@ a.ghost{text-decoration:none}
 </head>
 <body data-user="{{ user_email }}">
 <canvas id="confetti"></canvas>
-<div class="wrap">
-  <header class="top">
+<header class="appbar">
+ <div class="inner">
+  <div class="top">
     <img src="/logo.png" alt="Aid’Aux" class="logoimg" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'logo',innerHTML:'A<span>’</span>'}))">
     <div class="grow">
-      <h1>Dossiers salariés</h1>
+      <h1>Aid’Aux Dossiers</h1>
       <p id="today"></p>
     </div>
-    <button class="btn" id="addBtn">Ajouter un salarié</button>
-    <a class="ghost" href="/logout" title="{{ user_email }}">Se déconnecter</a>
-  </header>
-
+    <span class="who-me">{{ user_email }}</span>
+    <button class="btn teal" id="addBtn">+ Ajouter un salarié</button>
+    <a class="ghost" href="/logout">Se déconnecter</a>
+  </div>
   <section class="hero" id="hero" aria-label="Avancement de l’équipe"></section>
   <section class="feed" id="feed" aria-label="Fil d’actualité"></section>
-
+ </div>
+</header>
+<div class="wrap">
   <nav class="bar-tabs" aria-label="Espaces">
     <button class="tab" data-tab="arrivees">Arrivées<span class="n" id="nA"></span></button>
     <button class="tab" data-tab="poste">En poste<span class="n" id="nP"></span></button>
@@ -261,8 +270,8 @@ function renderHero(){
   let rdv=0;S.poste.forEach(p=>ECH.forEach(([k])=>{const e=p.ech[k];if(e.rdv&&days(e.rdv)>=0)rdv++}));
   document.getElementById("hero").innerHTML=
    `<div class="gauge total">${ring(pct,"var(--teal)",true)}<div><h3>Toute l’équipe</h3><p>${ok} dossier${ok>1?"s":""} sur ${tot} à jour${pct===100?", bravo":""}</p></div></div>
-    <div class="gauge"><div class="bignum" style="color:var(--coral)">${aT}</div><div><h3>À traiter</h3><p>Échéances proches, expirées ou à renseigner, et dossiers d’embauche en cours</p></div></div>
-    <div class="gauge"><div class="bignum" style="color:var(--rdv)">${rdv}</div><div><h3>RDV à venir</h3><p>Médecine du travail et entretiens déjà planifiés</p></div></div>`;
+    <div class="gauge"><div class="bignum" style="color:#FF8A6B">${aT}</div><div><h3>À traiter</h3><p>Échéances proches, expirées ou à renseigner, et dossiers d’embauche en cours</p></div></div>
+    <div class="gauge"><div class="bignum" style="color:#C9B8FF">${rdv}</div><div><h3>RDV à venir</h3><p>Médecine du travail et entretiens déjà planifiés</p></div></div>`;
 }
 function renderFeed(){
   const el=document.getElementById("feed");
