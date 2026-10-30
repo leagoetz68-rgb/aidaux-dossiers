@@ -150,6 +150,62 @@ a.ghost{text-decoration:none}
   .hero{grid-template-columns:1fr}
   .doc{grid-template-columns:1fr}
 }
+
+/* ---- deux colonnes ---- */
+.split{display:grid;grid-template-columns:minmax(260px,340px) minmax(0,1fr);gap:16px;align-items:start}
+.col-list{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:10px;position:sticky;top:12px;max-height:calc(100vh - 24px);display:flex;flex-direction:column}
+.li-head{display:flex;gap:6px;flex-wrap:wrap;padding:4px 4px 10px;border-bottom:1px solid var(--line);margin-bottom:6px}
+.li-wrap{overflow-y:auto;display:flex;flex-direction:column;gap:4px}
+.li{display:flex;gap:10px;align-items:center;text-align:left;width:100%;border:1px solid transparent;background:none;border-radius:12px;padding:8px}
+.li:hover{background:var(--bg)}
+.li.active{background:var(--teal-soft);border-color:var(--teal)}
+.li .av{width:36px;height:36px;font-size:12.5px}
+.li-t{flex:1;min-width:0}
+.li-t b{display:block;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.li-t>span{color:var(--ink2);font-size:12px}
+.li-m{display:flex;align-items:center;gap:8px;margin-top:3px}
+.li-m small{color:var(--ink2);font-size:11.5px}
+.dots{display:flex;gap:3px}
+.dot{width:9px;height:9px;border-radius:50%;display:block}
+.dot.st-ok{background:var(--ok)}.dot.st-warn{background:var(--warn)}.dot.st-bad{background:var(--bad)}.dot.st-rdv{background:var(--rdv)}.dot.st-vide{background:var(--line)}.dot.st-nc{background:var(--gray-soft);border:1px solid var(--line)}
+.mini{flex:1;height:5px;border-radius:9px;background:var(--gray-soft);overflow:hidden;max-width:90px}
+.mini i{display:block;height:100%;background:var(--ok)}
+.empty.small{padding:18px;font-size:13.5px;border-width:1px}
+.back-m{display:none}
+.dossier h4{font-size:14px;margin:18px 0 6px;color:var(--ink);font-family:Nunito,sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.02em}
+.dossier h4 small{text-transform:none;font-weight:400;color:var(--ink2);letter-spacing:0}
+.table{border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.trow{display:grid;grid-template-columns:minmax(150px,1.1fr) minmax(70px,auto) minmax(140px,1.6fr) 62px 52px;gap:10px;align-items:center;padding:7px 10px;border-top:1px solid var(--line)}
+.trow:first-child{border-top:none}
+.trow.thead{background:var(--bg);font-size:11.5px;font-weight:700;text-transform:uppercase;color:var(--ink2);padding:6px 10px}
+.trow.thead .t-ver{color:var(--coral)}
+.trow.is-ok{background:color-mix(in srgb,var(--ok-soft) 55%,transparent)}
+.trow.is-nc .t-doc{text-decoration:line-through;color:var(--ink2)}
+.t-doc{font-weight:600;font-size:14px}
+.t-doc small{font-weight:400;color:var(--ink2)}
+.t-pres,.t-ver{display:flex;justify-content:center}
+.t-wide{grid-column:2 / -1}
+.trow .com{border:1px solid var(--line);border-radius:8px;padding:6px 9px;background:var(--bg);font-size:13px;width:100%}
+.ptypes{display:flex;flex-direction:column;gap:3px;align-items:flex-start}
+.cl-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:4px 12px}
+.cbx{display:inline-flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;user-select:none}
+.cbx input{position:absolute;opacity:0;width:1px;height:1px}
+.cbx .box{width:22px;height:22px;border-radius:6px;border:2px solid var(--ink2);background:var(--card);display:grid;place-items:center;flex:none;transition:background .15s,border-color .15s}
+.cbx input:checked+.box{background:var(--ok);border-color:var(--ok)}
+.cbx input:checked+.box::after{content:"";width:6px;height:11px;border:solid #fff;border-width:0 3px 3px 0;transform:rotate(45deg) translate(-1px,-1px)}
+.cbx input:focus-visible+.box{outline:3px solid var(--teal);outline-offset:2px}
+.cbx input:disabled+.box{opacity:.35}
+.t-ver .cbx input:checked+.box{background:var(--coral);border-color:var(--coral)}
+@media (max-width:900px){
+  .split{grid-template-columns:1fr}
+  .col-list{position:static;max-height:none}
+  .split.has-open .col-list{display:none}
+  .back-m{display:inline-block}
+  .trow{grid-template-columns:1fr auto auto;grid-template-areas:"doc pres ver" "com com nc"}
+  .t-doc{grid-area:doc}.t-pres{grid-area:pres}.t-ver{grid-area:ver}.t-com{grid-area:com}.t-nc{grid-area:nc}
+  .trow.thead{display:none}
+  .t-wide{grid-column:1 / -1}
+}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -212,6 +268,7 @@ let UI={tab:"arrivees",agence:"Toutes",open:null,editor:null,onlyTodo:true,addin
 function norm(p){
   p.docs=p.docs||{};[...DOCS_OBL,...DOCS_SIGN].forEach(([k])=>{if(!p.docs[k])p.docs[k]={s:"manquant",c:""}});
   if(!p.docs.piece.t)p.docs.piece.t="cni";
+  if(!p.docs.piece.types){p.docs.piece.types={};if(p.docs.piece.s==="recu"||p.docs.piece.s==="verifie")p.docs.piece.types[p.docs.piece.t]=true}
   p.classeur=p.classeur||{};CLASSEUR.forEach(([k])=>{p.classeur[k]=!!p.classeur[k]});
   p.dates=p.dates||{};DATES.forEach(([k])=>{p.dates[k]=p.dates[k]||""});
   p.ech=p.ech||{};ECH.forEach(([k])=>{p.ech[k]=p.ech[k]||{date:"",rdv:""}});
@@ -301,49 +358,85 @@ function renderAdd(){
   document.getElementById("fNom").focus();
 }
 
-function viewArrivees(){
-  if(UI.open){const a=S.arrivees.find(x=>x.id===UI.open);if(a)return detail(a);UI.open=null}
-  const l=byAg(S.arrivees);
-  if(!l.length)return `<div class="empty"><h3>Aucune arrivée en cours</h3>Ajoutez un nouveau salarié pour suivre son dossier d’embauche.</div>`;
-  return `<div class="grid">${l.map(a=>{const p=progress(a);return `<button class="pcard" data-open="${a.id}">
-    <div class="who"><div class="av">${initials(a.nom)}</div><div><b>${esc(a.nom)}</b><span>${a.embauche?"Embauché(e) le "+fmt(a.embauche):"&nbsp;"}</span></div></div>
-    <div class="prog"><i class="pv" style="width:${p.v/p.t*100}%"></i><i class="pr" style="width:${p.r/p.t*100}%"></i></div>
-    <div class="progtxt"><span>${p.r?p.r+" à vérifier":"&nbsp;"}</span><span><b>${p.v}</b> / ${p.t}</span></div></button>`}).join("")}</div>`;
+// ---- Vue en deux colonnes : liste des salariés à gauche, fiche à droite ----
+function score(p){let m=9999;ECH.forEach(([k])=>{const e=p.ech[k];if(e.nc||e.rdv)return;if(!e.date)m=Math.min(m,-999);else m=Math.min(m,days(e.date))});return m}
+const alpha=(x,y)=>x.nom.localeCompare(y.nom,"fr");
+function listeOnglet(){
+  if(UI.tab==="arrivees")return byAg(S.arrivees).slice().sort(alpha);
+  let l=byAg(S.poste);
+  if(UI.onlyTodo)l=l.filter(todo).sort((x,y)=>score(x)-score(y)||alpha(x,y));
+  else l=l.slice().sort(alpha);
+  return l;
 }
-function docRow(a,k,lab){
-  const d=a.docs[k];
-  const sel=k==="piece"?`<br><select data-ptype="1" aria-label="Type de pièce">${Object.entries(PIECE_T).map(([v,t])=>`<option value="${v}" ${d.t===v?"selected":""}>${t}</option>`).join("")}</select>`:"";
-  return `<div class="doc"><div class="lab">${lab}${sel}</div>
-   <div class="sbtns"><button class="sbtn st-${d.s}" data-cyc="${k}" ${d.s==="nc"?"disabled":""}>${STATUS_LAB[d.s]}</button><button class="nc" data-nc="${k}" aria-pressed="${d.s==="nc"}" title="Non concerné">N/C</button></div>
-   <input class="com" data-com="${k}" value="${esc(d.c)}" placeholder="Commentaire" aria-label="Commentaire ${lab}"></div>`;
+function itemListe(p){
+  const pr=progress(p),act=UI.open===p.id;
+  const dots=ECH.map(([k,l,th])=>{const s=echStatus(p.ech[k],th);return `<i class="dot st-${s.k}" title="${l} : ${s.t}"></i>`}).join("");
+  return `<button class="li ${act?"active":""}" data-open="${p.id}" aria-current="${act}">
+    <div class="av">${initials(p.nom)}</div>
+    <div class="li-t"><b>${esc(p.nom)}</b><span>${p.embauche?"Embauché(e) le "+fmt(p.embauche):"&nbsp;"}</span>
+      <div class="li-m">${p.phase==="poste"?`<span class="dots">${dots}</span>`:""}<span class="mini"><i style="width:${pr.v/pr.t*100}%"></i></span><small>${pr.v}/${pr.t}</small></div></div></button>`;
 }
-function detail(a){
-  const p=progress(a);
-  return `<div class="detail">
-   <div class="dhead"><button class="ghost" data-back>← Retour</button><div class="av">${initials(a.nom)}</div><div style="flex:1"><h2>${esc(a.nom)}</h2><span style="color:var(--ink2);font-size:13px">${a.embauche?"Embauché(e) le "+fmt(a.embauche):""}</span></div><b style="font-family:'Baloo 2';font-size:22px">${p.v} / ${p.t}</b></div>
-   <div class="prog"><i class="pv" style="width:${p.v/p.t*100}%"></i><i class="pr" style="width:${p.r/p.t*100}%"></i></div>
-   <div class="legend">Touchez un statut pour avancer : <span class="sbtn st-manquant">Manquant</span><span class="sbtn st-recu">Reçu</span><span class="sbtn st-verifie">Vérifié</span></div>
-   <div class="sec"><h3>Documents obligatoires</h3>${DOCS_OBL.map(([k,l])=>docRow(a,k,l)).join("")}</div>
-   <div class="sec"><h3>Documents à faire signer</h3>${DOCS_SIGN.map(([k,l])=>docRow(a,k,l)).join("")}
-     <div class="doc" style="grid-template-columns:1fr"><div class="lab">Classeur complet (${CLASSEUR.filter(([k])=>a.classeur[k]).length}/8)</div>
-     <div class="sub">${CLASSEUR.map(([k,l])=>`<button class="tick" data-cl="${k}" aria-pressed="${!!a.classeur[k]}">${a.classeur[k]?"✓":"○"} ${l}</button>`).join("")}</div></div></div>
-   <div class="sec"><h3>Digiposte</h3><div class="dates">${DATES.map(([k,l])=>`<label>${l}<input type="date" data-date="${k}" value="${a.dates[k]||""}"></label>`).join("")}</div></div>
-   <div class="sec" style="text-align:right"><button class="ghost" data-retirer="${a.id}">Retirer ce salarié (départ)</button></div>
+function viewSplit(){
+  const l=listeOnglet();
+  let head="";
+  if(UI.tab==="poste"){
+    const nTodo=byAg(S.poste).filter(todo).length;
+    head=`<div class="li-head"><button class="chip" data-only="1" aria-pressed="${UI.onlyTodo}">À traiter (${nTodo})</button><button class="chip" data-only="0" aria-pressed="${!UI.onlyTodo}">Tout le monde (${byAg(S.poste).length})</button></div>`;
+  }
+  const vide=UI.tab==="arrivees"?`<div class="empty small">Aucune arrivée en cours.<br>Ajoutez un nouveau salarié pour suivre son dossier d’embauche.</div>`
+    :`<div class="empty small">Rien à traiter : toutes les échéances sont à jour.<br><button class="chip" data-only="0" style="margin-top:8px">Voir tout le monde</button></div>`;
+  const sel=UI.open&&find(UI.open);
+  if(UI.open&&!sel)UI.open=null;
+  return `<div class="split ${sel?"has-open":""}">
+    <aside class="col-list" aria-label="Salariés">${head}<div class="li-wrap">${l.length?l.map(itemListe).join(""):vide}</div></aside>
+    <section class="col-pane">${sel?fiche(sel):`<div class="empty"><h3>Choisissez un salarié</h3>Cliquez sur un nom à gauche pour voir ses échéances et son dossier administratif.</div>`}</section>
   </div>`;
 }
-function score(p){let m=9999;ECH.forEach(([k])=>{const e=p.ech[k];if(e.nc||e.rdv)return;if(!e.date)m=Math.min(m,-999);else m=Math.min(m,days(e.date))});return m}
-function viewPoste(){
-  let l=byAg(S.poste);
-  const nTodo=l.filter(todo).length;
-  if(UI.onlyTodo)l=l.filter(todo);
-  const sw=`<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap"><button class="chip" data-only="1" aria-pressed="${UI.onlyTodo}">À traiter (${nTodo})</button><button class="chip" data-only="0" aria-pressed="${!UI.onlyTodo}">Tout le monde</button></div>`;
-  if(!l.length)return sw+`<div class="empty"><h3>Rien à traiter</h3>Toutes les échéances sont à jour. Les salariés réapparaîtront ici quand une date approchera.</div>`;
-  l=l.slice().sort((x,y)=>score(x)-score(y));
-  return sw+`<div class="rows">${l.map(p=>`<div class="row"><div class="row-main">
-    <div class="who"><div class="av">${initials(p.nom)}</div><div><b>${esc(p.nom)}</b><span>${p.embauche?"Embauché(e) le "+fmt(p.embauche):"&nbsp;"}</span></div></div>
-    <div class="pills">${ECH.map(([k,l,th])=>{const s=echStatus(p.ech[k],th);const op=UI.editor&&UI.editor.id===p.id&&UI.editor.k===k;return `<button class="pill st-${s.k} ${op?"open":""}" data-ed="${p.id}|${k}" aria-expanded="${op}">${l}<small>${s.t}${s.s?", "+s.s:""}</small></button>`}).join("")}</div></div>
-    ${UI.editor&&UI.editor.id===p.id?editor(p,UI.editor.k):""}</div>`).join("")}</div>
-    <p class="note">Alertes : 3 mois avant pour la pièce d’identité, 1 mois pour l’attestation CPAM, 2 mois pour la médecine du travail et l’entretien individuel.</p>`;
+const cb=(attr,checked,label,dis)=>`<label class="cbx"><input type="checkbox" ${attr} ${checked?"checked":""} ${dis?"disabled":""}><span class="box" aria-hidden="true"></span>${label?`<span>${label}</span>`:""}</label>`;
+const present=d=>d.s==="recu"||d.s==="verifie";
+function ligneDoc(a,k,lab){
+  const d=a.docs[k],nc=d.s==="nc";
+  let pres;
+  if(k==="piece"){
+    const ty=d.types||{};
+    pres=`<div class="ptypes">${Object.entries(PIECE_T).map(([v,t])=>cb(`data-ptyp="${v}" aria-label="${t}"`,!!ty[v],t,nc)).join("")}</div>`;
+  } else pres=cb(`data-pres="${k}" aria-label="${lab} présent dans le dossier"`,present(d),"",nc);
+  return `<div class="trow ${nc?"is-nc":""} ${d.s==="verifie"?"is-ok":""}">
+    <div class="t-doc">${lab}</div>
+    <div class="t-pres">${pres}</div>
+    <div class="t-com"><input class="com" data-com="${k}" value="${esc(d.c)}" placeholder="Commentaire" aria-label="Commentaire ${lab}"></div>
+    <div class="t-ver">${cb(`data-ver="${k}" aria-label="${lab} vérifié"`,d.s==="verifie","",nc)}</div>
+    <div class="t-nc"><button class="nc" data-nc="${k}" aria-pressed="${nc}" title="Non concerné">N/C</button></div>
+  </div>`;
+}
+function fiche(a){
+  const p=progress(a);
+  const nCl=CLASSEUR.filter(([k])=>a.classeur[k]).length;
+  const pills=ECH.map(([k,l,th])=>{const s=echStatus(a.ech[k],th);const op=UI.editor&&UI.editor.id===a.id&&UI.editor.k===k;return `<button class="pill st-${s.k} ${op?"open":""}" data-ed="${a.id}|${k}" aria-expanded="${op}">${l}<small>${s.t}${s.s?", "+s.s:""}</small></button>`}).join("");
+  const thead=`<div class="trow thead"><div class="t-doc"></div><div class="t-pres">Présent</div><div class="t-com">Commentaires</div><div class="t-ver">Vérifié</div><div class="t-nc"></div></div>`;
+  return `<div class="detail">
+   <div class="dhead"><button class="ghost back-m" data-back>← Liste</button><div class="av">${initials(a.nom)}</div>
+     <div style="flex:1;min-width:180px"><h2>${esc(a.nom)}</h2><span style="color:var(--ink2);font-size:13px">${a.embauche?"Embauché(e) le "+fmt(a.embauche):""}${a.phase==="arrivee"?" · arrivée en cours":""}</span></div>
+     <b style="font-family:'Baloo 2';font-size:22px" title="Éléments du dossier vérifiés">${p.v} / ${p.t}</b></div>
+   <div class="prog"><i class="pv" style="width:${p.v/p.t*100}%"></i><i class="pr" style="width:${p.r/p.t*100}%"></i></div>
+
+   <div class="sec"><h3>Échéances</h3><div class="pills">${pills}</div>${UI.editor&&UI.editor.id===a.id?editor(a,UI.editor.k):""}</div>
+
+   <div class="sec dossier"><h3>Dossier administratif du salarié</h3>
+     <div class="dates" style="margin-bottom:6px"><label>Date du dossier<input type="date" data-date="dossier" value="${a.dates.dossier||""}"></label></div>
+     <h4>Documents obligatoires <small>présents dans le dossier</small></h4>
+     <div class="table">${thead}${DOCS_OBL.map(([k,l])=>ligneDoc(a,k,l)).join("")}</div>
+     <h4>Documents à faire signer</h4>
+     <div class="table">${thead}${DOCS_SIGN.map(([k,l])=>ligneDoc(a,k,l)).join("")}
+       <div class="trow ${nCl===CLASSEUR.length?"is-ok":""}"><div class="t-doc">Classeur complet <small>(${nCl}/${CLASSEUR.length})</small></div>
+         <div class="t-wide"><div class="cl-list">${CLASSEUR.map(([k,l])=>cb(`data-cl="${k}"`,!!a.classeur[k],l)).join("")}</div></div></div>
+     </div>
+     <h4>Digiposte</h4>
+     <div class="dates">${DATES.map(([k,l])=>`<label>${l}<input type="date" data-date="${k}" value="${a.dates[k]||""}"></label>`).join("")}</div>
+     <p class="note">Les cases sont enregistrées dès qu’on les coche. « Vérifié » coche aussi « Présent ».</p>
+   </div>
+   <div class="sec" style="text-align:right"><button class="ghost" data-retirer="${a.id}">Retirer ce salarié (départ)</button></div>
+  </div>`;
 }
 function editor(p,k){
   const e=p.ech[k],l=ECH.find(x=>x[0]===k)[1];
@@ -351,8 +444,7 @@ function editor(p,k){
    <label>Nouvelle date de validité<input type="date" id="edDate" value="${e.date||""}"></label><button class="btn teal" data-save>Enregistrer</button>
    <label>RDV pris le<input type="date" id="edRdv" value="${e.rdv||""}"></label><button class="btn light" data-rdv>Noter le RDV</button>
    ${e.rdv?`<button class="btn light" data-unrdv>Retirer le RDV</button>`:""}
-   <button class="nc" data-ncech aria-pressed="${!!e.nc}">Non concerné</button>
-   <span style="flex:1"></span><button class="ghost" data-retirer="${p.id}">Retirer ce salarié (départ)</button></div>`;
+   <button class="nc" data-ncech aria-pressed="${!!e.nc}">Non concerné</button></div>`;
 }
 
 function render(){
@@ -361,15 +453,15 @@ function render(){
   const v=document.getElementById("view");
   if(ERR){v.innerHTML=`<div class="empty"><h3>Impossible de charger les dossiers</h3>${esc(ERR)}<br><br><button class="btn" onclick="location.reload()">Réessayer</button></div>`;return}
   if(!LOADED){v.innerHTML=`<div class="empty">Chargement des dossiers…</div>`;return}
-  v.innerHTML=UI.tab==="arrivees"?viewArrivees():viewPoste();
+  v.innerHTML=viewSplit();
 }
 
 function checkDone(a){
-  if(!progress(a).done)return false;
+  if(a.phase!=="arrivee"||!progress(a).done)return false;
   a.phase="poste";
   S.arrivees=S.arrivees.filter(x=>x!==a);S.poste.unshift(a);
   push(a,{txt:"Dossier de "+a.nom+" bouclé"});
-  UI.open=null;render();
+  UI.tab="poste";UI.onlyTodo=false;render(); // la fiche reste ouverte
   toast("Dossier de "+first(a.nom)+" bouclé ! Direction l’espace En poste");confetti();
   return true;
 }
@@ -377,7 +469,7 @@ function find(id){return S.arrivees.find(x=>x.id===id)||S.poste.find(x=>x.id===i
 
 document.addEventListener("click",async ev=>{
   const t=ev.target.closest("button");if(!t)return;
-  const a=UI.open&&S.arrivees.find(x=>x.id===UI.open);
+  const a=UI.open&&find(UI.open);
   if(t.dataset.tab){UI.tab=t.dataset.tab;UI.open=null;UI.editor=null;return render()}
   if(t.dataset.ag){UI.agence=t.dataset.ag;return render()}
   if(t.id==="addBtn"){UI.adding=!UI.adding;UI.addErr="";return render()}
@@ -394,7 +486,7 @@ document.addEventListener("click",async ev=>{
     catch(e){t.disabled=false;document.getElementById("fErr").textContent=e.message}
     return;
   }
-  if(t.dataset.open){UI.open=t.dataset.open;render();return window.scrollTo({top:document.querySelector(".bar-tabs").offsetTop-10})}
+  if(t.dataset.open){UI.open=t.dataset.open;UI.editor=null;render();if(innerWidth<=900)window.scrollTo({top:document.querySelector(".bar-tabs").offsetTop-10});return}
   if(t.hasAttribute("data-back")){UI.open=null;return render()}
   if(t.dataset.retirer){
     const p=find(t.dataset.retirer);if(!p||!confirm("Retirer "+p.nom+" de la liste ? (départ de l’entreprise)"))return;
@@ -402,13 +494,11 @@ document.addEventListener("click",async ev=>{
     catch(e){toast("Impossible de retirer : "+e.message)}
     return;
   }
-  if(t.dataset.cyc&&a){const d=a.docs[t.dataset.cyc];d.s=STATUS_NEXT[d.s]||"manquant";render();if(!checkDone(a))push(a);return}
   if(t.dataset.nc&&a){const d=a.docs[t.dataset.nc];d.s=d.s==="nc"?"manquant":"nc";render();if(!checkDone(a))push(a);return}
-  if(t.dataset.cl&&a){a.classeur[t.dataset.cl]=!a.classeur[t.dataset.cl];render();if(!checkDone(a))push(a);return}
-  if(t.dataset.only){UI.onlyTodo=t.dataset.only==="1";UI.editor=null;return render()}
+  if(t.dataset.only){UI.onlyTodo=t.dataset.only==="1";return render()}
   if(t.dataset.ed){const [id,k]=t.dataset.ed.split("|");UI.editor=(UI.editor&&UI.editor.id===id&&UI.editor.k===k)?null:{id,k};return render()}
   if(UI.editor&&(t.hasAttribute("data-save")||t.hasAttribute("data-rdv")||t.hasAttribute("data-unrdv")||t.hasAttribute("data-ncech"))){
-    const p=S.poste.find(x=>x.id===UI.editor.id),k=UI.editor.k,e=p.ech[k],l=ECH.find(x=>x[0]===k)[1];let news=null;
+    const p=find(UI.editor.id),k=UI.editor.k,e=p.ech[k],l=ECH.find(x=>x[0]===k)[1];let news=null;
     if(t.hasAttribute("data-save")){const v=document.getElementById("edDate").value;if(!v)return toast("Choisissez une date de validité");e.date=v;e.rdv="";e.nc=false;news={txt:l+" de "+p.nom+" à jour jusqu’au "+fmt(v)};toast(l+" de "+first(p.nom)+" à jour")}
     if(t.hasAttribute("data-rdv")){const v=document.getElementById("edRdv").value;if(!v)return toast("Choisissez la date du RDV");e.rdv=v;news={txt:"RDV "+l.toLowerCase()+" pour "+p.nom+" le "+fmt(v),c:"coral"};toast("RDV noté")}
     if(t.hasAttribute("data-unrdv")){e.rdv=""}
@@ -417,10 +507,18 @@ document.addEventListener("click",async ev=>{
   }
 });
 document.addEventListener("change",ev=>{
-  const t=ev.target,a=UI.open&&S.arrivees.find(x=>x.id===UI.open);if(!a)return;
-  if(t.dataset.com){a.docs[t.dataset.com].c=t.value;push(a)}
-  if(t.dataset.ptype){a.docs.piece.t=t.value;push(a)}
-  if(t.dataset.date){a.dates[t.dataset.date]=t.value;render();if(!checkDone(a))push(a)}
+  const t=ev.target,a=UI.open&&find(UI.open);if(!a)return;
+  if(t.dataset.com){a.docs[t.dataset.com].c=t.value;push(a);return}
+  if(t.dataset.date){a.dates[t.dataset.date]=t.value;render();if(!checkDone(a))push(a);return}
+  let coche=false;
+  if(t.dataset.pres){const d=a.docs[t.dataset.pres];d.s=t.checked?(d.s==="verifie"?"verifie":"recu"):"manquant";coche=true}
+  if(t.dataset.ver){const d=a.docs[t.dataset.ver];d.s=t.checked?"verifie":(d.s==="verifie"?"recu":d.s);
+    if(t.dataset.ver==="piece"&&t.checked&&!Object.values(d.types||{}).some(Boolean)){d.types={...(d.types||{}),[d.t||"cni"]:true}}coche=true}
+  if(t.dataset.ptyp){const d=a.docs.piece;d.types=d.types||{};d.types[t.dataset.ptyp]=t.checked;
+    const un=Object.keys(PIECE_T).find(x=>d.types[x]);if(un)d.t=un;
+    d.s=un?(d.s==="verifie"?"verifie":"recu"):"manquant";coche=true}
+  if(t.dataset.cl){a.classeur[t.dataset.cl]=t.checked;coche=true}
+  if(coche){render();if(!checkDone(a))push(a)}
 });
 document.addEventListener("keydown",ev=>{if(ev.key==="Enter"&&ev.target.id==="fNom")document.getElementById("fOk").click()});
 
