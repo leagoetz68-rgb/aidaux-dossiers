@@ -207,6 +207,29 @@ a.ghost{text-decoration:none}
   .t-wide{grid-column:1 / -1}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* ==== Couleurs : uniquement VERT = fait, ROUGE = pas fait ==== */
+.pill.st-ok,.pill.st-nc{background:var(--ok-soft)!important;color:var(--ok)!important;border-color:transparent!important;text-decoration:none!important}
+.pill.st-warn,.pill.st-bad,.pill.st-rdv,.pill.st-vide{background:var(--bad-soft)!important;color:var(--bad)!important;border-color:transparent!important}
+.pill.st-bad.open,.pill.open{outline:2px solid currentColor}
+.dot.st-ok,.dot.st-nc{background:var(--ok)!important;border:none!important}
+.dot.st-warn,.dot.st-bad,.dot.st-rdv,.dot.st-vide{background:var(--bad)!important}
+.prog,.mini{background:var(--bad-soft)!important}
+.prog .pv,.mini i{background:var(--ok)!important}
+.prog .pr{background:transparent!important}
+.cbx .box{border-color:var(--bad)!important;background:var(--bad-soft)!important}
+.cbx input:checked+.box,.t-ver .cbx input:checked+.box{background:var(--ok)!important;border-color:var(--ok)!important}
+.trow.thead .t-ver,.sec h3{color:var(--ink)!important}
+.av{background:var(--gray-soft)!important;color:var(--ink)!important}
+.li.active{background:var(--gray-soft)!important;border-color:var(--ink2)!important}
+.chip[aria-pressed="true"]{background:var(--gray-soft)!important;color:var(--ink)!important;border-color:var(--ink2)!important}
+.btn.teal{background:var(--navy)!important;color:#fff!important}
+.nc[aria-pressed="true"]{background:var(--ok-soft)!important;color:var(--ok)!important;border-color:transparent!important}
+
+/* Médecine du travail : BLEU quand la date approche */
+.pill.st-warn[data-ed$="|medecine"]{background:#E3EEFB!important;color:#1F5FBF!important}
+.dots .dot:nth-child(3).st-warn{background:#1F5FBF!important}
+@media (prefers-color-scheme:dark){.pill.st-warn[data-ed$="|medecine"]{background:#16294A!important;color:#8DB8F5!important}.dots .dot:nth-child(3).st-warn{background:#8DB8F5!important}}
 </style>
 </head>
 <body data-user="{{ user_email }}">
