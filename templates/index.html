@@ -310,6 +310,7 @@ a.ghost{text-decoration:none}
       <p id="today"></p>
     </div>
     <span class="who-me">{{ user_email }}</span>
+    <button class="btn light" id="impBtn" title="Importer les emails depuis un export Excel de Ximi">📥 Emails Ximi</button><input type="file" id="impFile" accept=".xlsx,.xls,.csv" hidden>
     <button class="btn teal" id="addBtn">+ Ajouter un salarié</button>
     <a class="ghost" href="/logout">Se déconnecter</a>
   </div>
@@ -330,6 +331,7 @@ a.ghost{text-decoration:none}
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 {% raw %}
 <script>
 const DAY=86400000;
@@ -435,6 +437,7 @@ function renderTabs(){
 }
 function renderAdd(){
   const z=document.getElementById("addZone");
+  if(UI.imp){z.innerHTML=renderImp();return}
   if(!UI.adding){z.innerHTML="";return}
   z.innerHTML=`<div class="detail" style="margin-bottom:14px"><h3 style="font-size:20px;margin-bottom:10px">Ajouter un salarié</h3>
    <div class="dates">
@@ -628,12 +631,82 @@ function checkDone(a){
 }
 function find(id){return S.arrivees.find(x=>x.id===id)||S.poste.find(x=>x.id===id)}
 
+// ───── Import des emails depuis un export Excel de Ximi ─────
+const nk=x=>String(x||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-Z]+/g," ").trim();
+const cle=x=>nk(x).split(" ").filter(Boolean).sort().join(" ");
+function lireXimi(rows){
+  // Cherche la ligne d'en-tête qui contient une colonne email
+  let h=-1,cMail=-1;
+  for(let i=0;i<Math.min(rows.length,20)&&h<0;i++){
+    (rows[i]||[]).forEach((c,j)=>{if(cMail<0&&/MAIL/.test(nk(c))){cMail=j;h=i}});
+  }
+  if(h<0)throw new Error("Aucune colonne « email » trouvée dans le fichier");
+  const head=rows[h].map(nk);
+  const cPre=head.findIndex(c=>/^PRENOM/.test(c));
+  let cNom=head.findIndex(c=>/^NOM( D USAGE| USUEL)?$/.test(c));
+  if(cNom<0)cNom=head.findIndex(c=>/^NOM/.test(c)&&!/NAISSANCE|JEUNE/.test(c));
+  if(cNom<0)cNom=head.findIndex(c=>/SALARIE|INTERVENANT|IDENTITE|COLLABORATEUR/.test(c));
+  if(cNom<0)throw new Error("Aucune colonne « nom » trouvée dans le fichier");
+  const out=[];
+  rows.slice(h+1).forEach(r=>{
+    const mail=String(r[cMail]||"").trim().toLowerCase();
+    const nom=[r[cNom],cPre>=0?r[cPre]:""].join(" ").trim();
+    if(nom&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail))out.push({nom,mail});
+  });
+  return out;
+}
+function rapprocher(lignes){
+  const tous=[...S.arrivees,...S.poste],idx={};
+  lignes.forEach(l=>{idx[cle(l.nom)]=l.mail});
+  const ok=[],deja=[],absents=[];
+  tous.forEach(a=>{
+    let m=idx[cle(a.nom)];
+    if(!m){ // repli : tous les mots du nom de l'app se retrouvent dans une ligne Ximi
+      const mots=cle(a.nom).split(" ");
+      const c=lignes.filter(l=>{const k=" "+cle(l.nom)+" ";return mots.every(w=>k.includes(" "+w+" "))});
+      if(c.length===1)m=c[0].mail;
+    }
+    if(!m)absents.push(a);
+    else if((a.email||"").toLowerCase()===m)deja.push(a);
+    else ok.push({a,mail:m});
+  });
+  return {ok,deja,absents};
+}
+function renderImp(){
+  const r=UI.imp;
+  const li=r.ok.map(({a,mail})=>`<li><b>${esc(a.nom)}</b> → ${esc(mail)}${a.email?` <small style="color:var(--ink2)">(remplace ${esc(a.email)})</small>`:""}</li>`).join("");
+  const ab=r.absents.map(a=>esc(a.nom)).join(", ");
+  return `<div class="detail" style="margin-bottom:14px"><h3 style="font-size:20px;margin-bottom:6px">Import des emails Ximi</h3>
+   <p style="margin-bottom:10px">${r.ok.length} email(s) à enregistrer · ${r.deja.length} déjà à jour · ${r.absents.length} salarié(s) non trouvé(s) dans le fichier</p>
+   ${r.ok.length?`<ul style="max-height:260px;overflow:auto;margin:0 0 10px 18px;font-size:14px">${li}</ul>`:""}
+   ${r.absents.length?`<details style="margin-bottom:10px;font-size:13px"><summary>Voir les salariés non trouvés</summary><p style="margin-top:6px">${ab}</p></details>`:""}
+   <div style="display:flex;gap:8px">${r.ok.length?`<button class="btn teal" id="impOk">Enregistrer ${r.ok.length} email(s)</button>`:""}<button class="btn light" id="impCancel">Fermer</button></div></div>`;
+}
+document.addEventListener("change",async ev=>{
+  if(ev.target.id!=="impFile")return;
+  const f=ev.target.files[0];ev.target.value="";if(!f)return;
+  try{
+    if(!window.XLSX)throw new Error("lecteur Excel non chargé, rechargez la page");
+    const wb=XLSX.read(await f.arrayBuffer(),{type:"array"});
+    const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:""});
+    const lignes=lireXimi(rows);
+    if(!lignes.length)throw new Error("aucune ligne avec un email valide");
+    UI.imp=rapprocher(lignes);UI.adding=false;render();
+  }catch(e){toast("Import impossible : "+e.message)}
+});
 document.addEventListener("click",async ev=>{
   const t=ev.target.closest("button");if(!t)return;
   const a=UI.open&&find(UI.open);
   if(t.dataset.tab){UI.tab=t.dataset.tab;UI.open=null;UI.editor=null;return render()}
   if(t.dataset.ag){UI.agence=t.dataset.ag;return render()}
   if(t.id==="addBtn"){UI.adding=!UI.adding;UI.addErr="";return render()}
+  if(t.id==="impBtn"){document.getElementById("impFile").click();return}
+  if(t.id==="impCancel"){UI.imp=null;return render()}
+  if(t.id==="impOk"){
+    const n=UI.imp.ok.length;
+    UI.imp.ok.forEach(({a,mail})=>{a.email=mail;push(a)});
+    UI.imp=null;render();toast(n+" email(s) enregistré(s)");return
+  }
   if(t.dataset.ph){document.querySelectorAll("[data-ph]").forEach(b=>b.setAttribute("aria-pressed",b===t));return}
   if(t.id==="fCancel"){UI.adding=false;return render()}
   if(t.id==="fOk"){
