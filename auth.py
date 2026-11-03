@@ -274,14 +274,16 @@ def login():
     if request.method == "POST":
         email = request.form.get("email", "")
         mdp = request.form.get("password", "")
-        if verifier_login(email, mdp):
+        if not email_autorise(email):
+            erreur = "Cet email n'a pas accès à cette application."
+        elif verifier_login(email, mdp):
             session["user_email"] = email.strip().lower()
             nxt = request.args.get("next") or "/"
             # N'autorise qu'une redirection interne (évite une redirection ouverte).
             if not nxt.startswith("/") or nxt.startswith("//"):
                 nxt = "/"
             return redirect(nxt)
-        erreur = "Email ou mot de passe incorrect."
+        erreur = erreur or "Email ou mot de passe incorrect."
     corps = """
     <form method="POST">
       <label>Adresse email</label>
@@ -380,7 +382,10 @@ _ENDPOINTS_PUBLICS = {"auth.login", "auth.logout", "auth.oubli", "auth.definir",
 
 
 def est_connecte():
-    return bool(session.get("user_email"))
+    # Vérifie aussi la liste d'accès : une session ouverte avant un retrait
+    # d'accès n'est plus valable.
+    email = session.get("user_email")
+    return bool(email) and email_autorise(email)
 
 
 def proteger(app, endpoints_publics=()):
