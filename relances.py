@@ -62,7 +62,55 @@ def _fmt(d):
     return d.strftime("%d/%m/%Y")
 
 
-def _envoyer(destinataire, sujet, corps, bcc=None):
+# ---- Envoi des mails ----
+# Si les variables Microsoft (MS_*) sont renseignées, les mails partent depuis
+# la boîte Outlook (Microsoft 365) via Microsoft Graph et apparaissent dans
+# « Éléments envoyés ». Sinon, repli sur Brevo comme avant.
+MS_TENANT_ID = os.environ.get("MS_TENANT_ID", "")
+MS_CLIENT_ID = os.environ.get("MS_CLIENT_ID", "")
+MS_CLIENT_SECRET = os.environ.get("MS_CLIENT_SECRET", "")
+MS_EXPEDITEUR = os.environ.get("MS_EXPEDITEUR", "lea.goetz@aidaux.fr")
+
+
+def _outlook_actif():
+    return bool(MS_TENANT_ID and MS_CLIENT_ID and MS_CLIENT_SECRET)
+
+
+def _jeton_microsoft():
+    r = auth.requests.post(
+        f"https://login.microsoftonline.com/{MS_TENANT_ID}/oauth2/v2.0/token",
+        data={
+            "client_id": MS_CLIENT_ID,
+            "client_secret": MS_CLIENT_SECRET,
+            "scope": "https://graph.microsoft.com/.default",
+            "grant_type": "client_credentials",
+        },
+        timeout=10,
+    )
+    if r.status_code >= 300:
+        raise RuntimeError(f"Connexion Microsoft refusée ({r.status_code}) : {r.text}")
+    return r.json()["access_token"]
+
+
+def _envoyer_outlook(destinataire, sujet, corps, bcc=None):
+    message = {
+        "subject": sujet,
+        "body": {"contentType": "Text", "content": corps},
+        "toRecipients": [{"emailAddress": {"address": destinataire}}],
+    }
+    if bcc and bcc.lower() not in (destinataire.lower(), MS_EXPEDITEUR.lower()):
+        message["bccRecipients"] = [{"emailAddress": {"address": bcc}}]
+    r = auth.requests.post(
+        f"https://graph.microsoft.com/v1.0/users/{MS_EXPEDITEUR}/sendMail",
+        headers={"Authorization": f"Bearer {_jeton_microsoft()}", "Content-Type": "application/json"},
+        json={"message": message, "saveToSentItems": True},
+        timeout=15,
+    )
+    if r.status_code >= 300:
+        raise RuntimeError(f"Outlook a refusé l'envoi ({r.status_code}) : {r.text}")
+
+
+def _envoyer_brevo(destinataire, sujet, corps, bcc=None):
     if not auth.BREVO_API_KEY:
         raise RuntimeError("BREVO_API_KEY non configurée")
     payload = {
@@ -81,6 +129,13 @@ def _envoyer(destinataire, sujet, corps, bcc=None):
     )
     if r.status_code >= 300:
         raise RuntimeError(f"Brevo {r.status_code} : {r.text}")
+
+
+def _envoyer(destinataire, sujet, corps, bcc=None):
+    if _outlook_actif():
+        _envoyer_outlook(destinataire, sujet, corps, bcc)
+    else:
+        _envoyer_brevo(destinataire, sujet, corps, bcc)
 
 
 def _mail_salarie(s, fin, jours, palier):
@@ -196,4 +251,4 @@ def cron_relances():
     # Vercel envoie automatiquement « Authorization: Bearer <CRON_SECRET> »
     if not CRON_SECRET or request.headers.get("Authorization") != f"Bearer {CRON_SECRET}":
         return jsonify({"ok": False, "erreur": "non autorisé"}), 401
-    return jsonify({"ok": True, "traites": lancer_relances()})
+    return jsonify({"ok": True, "envoi": "outlook" if _outlook_actif() else "brevo", "traites": lancer_relances()})
