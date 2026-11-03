@@ -251,4 +251,11 @@ def cron_relances():
     # Vercel envoie automatiquement « Authorization: Bearer <CRON_SECRET> »
     if not CRON_SECRET or request.headers.get("Authorization") != f"Bearer {CRON_SECRET}":
         return jsonify({"ok": False, "erreur": "non autorisé"}), 401
-    return jsonify({"ok": True, "envoi": "outlook" if _outlook_actif() else "brevo", "traites": lancer_relances()})
+    emails = None
+    try:  # récupère d'abord les emails manquants depuis Ximi (sans bloquer les relances)
+        import ximi_emails
+        emails = ximi_emails.remplir_emails_vides()
+    except Exception as e:
+        emails = f"erreur Ximi : {e}"
+    return jsonify({"ok": True, "envoi": "outlook" if _outlook_actif() else "brevo",
+                    "emails_ximi": emails, "traites": lancer_relances()})
