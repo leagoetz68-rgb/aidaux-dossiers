@@ -135,6 +135,22 @@ def _envoyer_mail(destinataire, sujet, corps):
         raise RuntimeError(f"Brevo a refusé l'envoi ({reponse.status_code}) : {reponse.text}")
 
 
+def creer_lien_mot_de_passe(email, base_url, heures=None):
+    """Crée un jeton et renvoie le lien de définition du mot de passe (sans l'envoyer)."""
+    email = email.strip().lower()
+    token = secrets.token_urlsafe(32)
+    expire = datetime.utcnow() + timedelta(hours=heures or TOKEN_TTL_HEURES)
+    conn = _conn()
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO comptes_tokens (token, email, expire_at) VALUES (%s, %s, %s)",
+        (token, email, expire),
+    )
+    conn.commit()
+    conn.close()
+    return base_url.rstrip("/") + "/definir-mot-de-passe/" + token
+
+
 def envoyer_lien_mot_de_passe(email, base_url):
     """Crée un jeton et envoie par email le lien de définition du mot de passe."""
     email = email.strip().lower()
@@ -332,6 +348,34 @@ def oubli():
         erreur=erreur,
         succes=succes,
     )
+
+
+# ── Gestion des accès : un admin génère lui-même le lien « mot de passe »
+# et le transmet (Teams, Outlook…), sans dépendre de l'envoi par Brevo.
+ADMINS = [e.strip().lower() for e in os.environ.get("AUTH_ADMIN_EMAILS", "lea.goetz@aidaux.fr").split(",") if e.strip()]
+
+
+@bp.route("/acces", methods=["GET", "POST"])
+def acces():
+    if (session.get("user_email") or "").lower() not in ADMINS:
+        return redirect("/")
+    lien = cible = None
+    if request.method == "POST":
+        cible = request.form.get("email", "").strip().lower()
+        if email_autorise(cible):
+            lien = creer_lien_mot_de_passe(cible, request.url_root, heures=48)
+    lignes = "".join(
+        f'''<form method="POST" style="display:flex;gap:8px;align-items:center;margin:8px 0">
+             <input type="hidden" name="email" value="{e}"><span style="flex:1">{e}</span>
+             <button type="submit" style="width:auto;padding:8px 12px;margin:0">Générer un lien</button></form>'''
+        for e in EMAILS_AUTORISES
+    )
+    if lien:
+        lignes = (f'''<p style="margin:10px 0 4px">Lien pour <b>{cible}</b> (valable 48 h) — copiez-le et envoyez-le par Teams ou Outlook :</p>
+                  <input readonly value="{lien}" onclick="this.select()" style="width:100%">
+                  <hr style="margin:16px 0;border:0;border-top:1px solid #ddd">''' + lignes)
+    corps = lignes + '<div class="links"><a href="/">← Retour à l\'application</a></div>'
+    return _rendre("Accès", "Personnes autorisées à se connecter", corps)
 
 
 @bp.route("/definir-mot-de-passe/<token>", methods=["GET", "POST"])
