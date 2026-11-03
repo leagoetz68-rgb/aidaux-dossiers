@@ -15,7 +15,12 @@ import auth  # noqa: E402
 
 auth.init_auth_db()
 app.register_blueprint(auth.bp)
-auth.proteger(app)
+
+# Relances automatiques des titres de séjour (Cron Vercel, 1x/jour)
+import relances  # noqa: E402
+
+app.register_blueprint(relances.bp)
+auth.proteger(app, endpoints_publics={"relances.cron_relances"})
 
 AGENCES = ["Cronenbourg", "Vendenheim", "Personnel administratif"]
 PHASES = {"arrivee", "poste"}
@@ -68,6 +73,7 @@ def init_db():
 
 
 init_db()
+relances.init_db()
 
 
 def _salarie(row):
@@ -169,6 +175,9 @@ def api_maj(sid):
     if "embauche" in body:
         champs.append("embauche = %s")
         valeurs.append(body["embauche"] or None)
+    if "email" in body:
+        champs.append("email = %s")
+        valeurs.append((body["email"] or "").strip().lower() or None)
     conn = auth._conn()
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
