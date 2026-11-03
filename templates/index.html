@@ -310,7 +310,7 @@ a.ghost{text-decoration:none}
       <p id="today"></p>
     </div>
     <span class="who-me">{{ user_email }}</span>
-    <button class="btn light" id="impBtn" title="Importer les emails depuis un export Excel de Ximi">📥 Emails Ximi</button><input type="file" id="impFile" accept=".xlsx,.xls,.csv" hidden>
+    <button class="btn light" id="impBtn" title="Récupérer les emails des salariés depuis Ximi">📥 Emails Ximi</button><input type="file" id="impFile" accept=".xlsx,.xls,.csv" hidden>
     <button class="btn teal" id="addBtn">+ Ajouter un salarié</button>
     <a class="ghost" href="/logout">Se déconnecter</a>
   </div>
@@ -680,7 +680,7 @@ function renderImp(){
    <p style="margin-bottom:10px">${r.ok.length} email(s) à enregistrer · ${r.deja.length} déjà à jour · ${r.absents.length} salarié(s) non trouvé(s) dans le fichier</p>
    ${r.ok.length?`<ul style="max-height:260px;overflow:auto;margin:0 0 10px 18px;font-size:14px">${li}</ul>`:""}
    ${r.absents.length?`<details style="margin-bottom:10px;font-size:13px"><summary>Voir les salariés non trouvés</summary><p style="margin-top:6px">${ab}</p></details>`:""}
-   <div style="display:flex;gap:8px">${r.ok.length?`<button class="btn teal" id="impOk">Enregistrer ${r.ok.length} email(s)</button>`:""}<button class="btn light" id="impCancel">Fermer</button></div></div>`;
+   <div style="display:flex;gap:8px">${r.ok.length?`<button class="btn teal" id="impOk">Enregistrer ${r.ok.length} email(s)</button>`:""}<button class="btn light" id="impCancel">Fermer</button><button class="btn light" id="impXls" title="Importer un export Excel de Ximi">Fichier Excel…</button></div></div>`;
 }
 document.addEventListener("change",async ev=>{
   if(ev.target.id!=="impFile")return;
@@ -700,7 +700,15 @@ document.addEventListener("click",async ev=>{
   if(t.dataset.tab){UI.tab=t.dataset.tab;UI.open=null;UI.editor=null;return render()}
   if(t.dataset.ag){UI.agence=t.dataset.ag;return render()}
   if(t.id==="addBtn"){UI.adding=!UI.adding;UI.addErr="";return render()}
-  if(t.id==="impBtn"){document.getElementById("impFile").click();return}
+  if(t.id==="impBtn"){
+    t.disabled=true;const lib=t.textContent;t.textContent="⏳ Ximi…";
+    try{const j=await api("/api/ximi/emails");
+      UI.imp=rapprocher(j.lignes||[]);UI.adding=false;render();
+      if(!(j.lignes||[]).length)toast("Ximi n’a renvoyé aucun email pour vos salariés");
+    }catch(e){if(e.message!=="login")toast("Ximi indisponible ("+e.message+"). Vous pouvez importer un export Excel avec le bouton « Fichier ».")}
+    finally{t.disabled=false;t.textContent=lib}
+    return}
+  if(t.id==="impXls"){document.getElementById("impFile").click();return}
   if(t.id==="impCancel"){UI.imp=null;return render()}
   if(t.id==="impOk"){
     const n=UI.imp.ok.length;
