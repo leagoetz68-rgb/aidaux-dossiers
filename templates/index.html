@@ -382,7 +382,7 @@ async function load(){
 }
 let chain=Promise.resolve();
 function push(p,news){
-  const body={docs:p.docs,classeur:p.classeur,dates:p.dates,ech:p.ech,vie:p.vie,phase:p.phase};
+  const body={docs:p.docs,classeur:p.classeur,dates:p.dates,ech:p.ech,vie:p.vie,phase:p.phase,email:p.email||""};
   if(news)body.news=news;
   chain=chain.then(()=>api("/api/salaries/"+p.id,{method:"PUT",body:JSON.stringify(body)}))
     .then(j=>{if(j&&j.feed){S.feed=j.feed;renderFeed()}})
@@ -583,7 +583,7 @@ function fiche(a){
 
    ${accHead("admin","🗂️","Dossier administratif obligatoire","Pièces, signatures, classeur et Digiposte",`${p.v} / ${p.t}`,p.v===p.t?"ok":"bad")}
    <div class="acc-body" ${UI.acc.admin?"":"hidden"}><div class="sec dossier">
-     <div class="dates" style="margin-bottom:6px"><label>Date du dossier<input type="date" data-date="dossier" value="${a.dates.dossier||""}"></label></div>
+     <div class="dates" style="margin-bottom:6px"><label>Date du dossier<input type="date" data-date="dossier" value="${a.dates.dossier||""}"></label><label>Email du salarié <small>(relances titre de séjour)</small><input type="email" data-email value="${esc(a.email||"")}" placeholder="prenom.nom@exemple.fr" autocomplete="off"></label></div>
      <h4>Documents obligatoires <small>présents dans le dossier</small></h4>
      <div class="table">${thead}${DOCS_OBL.map(([k,l])=>ligneDoc(a,k,l)).join("")}</div>
      <h4>Documents à faire signer</h4>
@@ -687,6 +687,7 @@ document.addEventListener("change",ev=>{
     if(f==="rdv"&&t.value)news={txt:"RDV "+l.toLowerCase()+" pour "+a.nom+" le "+fmt(t.value),c:"coral"};
     render();push(a,news);return}
   if(t.dataset.av){const [i,f]=t.dataset.av.split("|"),av=a.vie.avenants[+i];if(!av)return;av[f]=f==="signe"?t.checked:t.value;render();push(a);return}
+  if(t.hasAttribute("data-email")){a.email=t.value.trim();push(a);toast("Email enregistré");return}
   if(t.dataset.date){a.dates[t.dataset.date]=t.value;render();if(!checkDone(a))push(a);return}
   let coche=false;
   if(t.dataset.pres){const d=a.docs[t.dataset.pres];d.s=t.checked?(d.s==="verifie"?"verifie":"recu"):"manquant";coche=true}
