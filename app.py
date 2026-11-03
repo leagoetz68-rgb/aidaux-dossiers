@@ -20,6 +20,9 @@ app.register_blueprint(auth.bp)
 import relances  # noqa: E402
 
 app.register_blueprint(relances.bp)
+import ximi_emails  # noqa: E402
+
+app.register_blueprint(ximi_emails.bp)
 auth.proteger(app, endpoints_publics={"relances.cron_relances"})
 
 AGENCES = ["Cronenbourg", "Vendenheim", "Personnel administratif"]
