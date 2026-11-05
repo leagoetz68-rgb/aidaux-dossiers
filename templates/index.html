@@ -401,7 +401,9 @@ function echStatus(e,th){
   if(d<=th)return{k:"warn",t:"Dans "+d+" j",s:"le "+fmt(e.date)};
   return{k:"ok",t:"À jour",s:"jusqu’au "+fmt(e.date)};
 }
-const todo=p=>ECH.some(([k,,th])=>["vide","bad","warn"].includes(echStatus(p.ech[k],th).k));
+// À traiter : une échéance proche/expirée/à renseigner OU une case du dossier pas cochée
+// (seule la case CMU, simple information, n'est pas comptée).
+const todo=p=>!progress(p).done||ECH.some(([k,,th])=>["vide","bad","warn"].includes(echStatus(p.ech[k],th).k));
 function progress(a){
   let v=0,r=0,t=0;
   [...DOCS_OBL,...DOCS_SIGN].forEach(([k])=>{t++;const s=a.docs[k].s;if(s==="verifie"||s==="nc")v++;else if(s==="recu")r++});
@@ -422,7 +424,7 @@ function renderHero(){
   let rdv=0;S.poste.forEach(p=>ECH.forEach(([k])=>{const e=p.ech[k];if(e.rdv&&days(e.rdv)>=0)rdv++}));
   document.getElementById("hero").innerHTML=
    `<div class="gauge total">${ring(pct,"var(--teal)",true)}<div><h3>Toute l’équipe</h3><p>${ok} dossier${ok>1?"s":""} sur ${tot} à jour${pct===100?", bravo":""}</p></div></div>
-    <div class="gauge"><div class="bignum" style="color:#FF8A6B">${aT}</div><div><h3>À traiter</h3><p>Échéances proches, expirées ou à renseigner, et dossiers d’embauche en cours</p></div></div>
+    <div class="gauge"><div class="bignum" style="color:#FF8A6B">${aT}</div><div><h3>À traiter</h3><p>Échéances proches, expirées ou à renseigner, et dossiers incomplets</p></div></div>
     <div class="gauge"><div class="bignum" style="color:#C9B8FF">${rdv}</div><div><h3>RDV à venir</h3><p>Médecine du travail et entretiens déjà planifiés</p></div></div>`;
 }
 function renderFeed(){
@@ -480,7 +482,7 @@ function viewSplit(){
     head=`<div class="li-head"><button class="chip" data-only="1" aria-pressed="${UI.onlyTodo}">À traiter (${nTodo})</button><button class="chip" data-only="0" aria-pressed="${!UI.onlyTodo}">Tout le monde (${byAg(S.poste).length})</button></div>`;
   }
   const vide=UI.tab==="arrivees"?`<div class="empty small">Aucune arrivée en cours.<br>Ajoutez un nouveau salarié pour suivre son dossier d’embauche.</div>`
-    :`<div class="empty small">Rien à traiter : toutes les échéances sont à jour.<br><button class="chip" data-only="0" style="margin-top:8px">Voir tout le monde</button></div>`;
+    :`<div class="empty small">Rien à traiter : dossiers complets et échéances à jour.<br><button class="chip" data-only="0" style="margin-top:8px">Voir tout le monde</button></div>`;
   const sel=UI.open&&find(UI.open);
   if(UI.open&&!sel)UI.open=null;
   return `<div class="split ${sel?"has-open":""}">
