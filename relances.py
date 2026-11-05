@@ -1,11 +1,14 @@
-"""Relances automatiques des titres de séjour.
+"""Relances automatiques des titres de séjour et des attestations CSS.
 
 Appelé une fois par jour par le Cron Vercel (voir vercel.json) :
   - 3 mois avant la fin de validité  → mail de relance au salarié
   - 1 mois avant                     → 2e relance au salarié
   - 15 jours avant (ou déjà expiré)  → alerte par mail à Marie
 
-Chaque mail n'est envoyé qu'une seule fois par titre (table dossiers_relances).
+Même chose pour l'attestation CSS (complémentaire santé solidaire), pour tous
+les salariés qui ont une date « Valable jusqu'au » renseignée.
+
+Chaque mail n'est envoyé qu'une seule fois par document (table dossiers_relances).
 Quand une nouvelle date de validité est saisie, le cycle repart de zéro.
 """
 import os
@@ -56,6 +59,24 @@ def _a_un_titre_de_sejour(docs):
     if isinstance(types, dict) and types:
         return bool(types.get("titre"))
     return piece.get("t") == "titre"
+
+
+# Documents suivis : (clé de l'échéance, préfixe des paliers en base, libellés)
+DOCUMENTS = [
+    {"ech": "piece", "prefixe": "", "nom": "titre de séjour", "votre": "votre titre de séjour",
+     "le": "le titre de séjour", "nouveau": "votre nouveau titre de séjour (ou le récépissé de demande)",
+     "Alerte": "Alerte titre de séjour", "suivi": _a_un_titre_de_sejour,
+     "faire": "faire votre demande de renouvellement",
+     "fin": "Sans document valable à la date d'échéance, nous ne pourrons malheureusement pas "
+            "maintenir votre planning.\n\n",
+     "point": "récépissé de demande, nouveau titre"},
+    {"ech": "cpam", "prefixe": "css_", "nom": "attestation CSS", "votre": "votre attestation CSS (complémentaire santé solidaire)",
+     "le": "l'attestation CSS", "nouveau": "votre nouvelle attestation CSS",
+     "Alerte": "Alerte attestation CSS", "suivi": lambda docs: True,
+     "faire": "demander son renouvellement auprès de votre CPAM (ameli.fr)",
+     "fin": "",
+     "point": "demande de renouvellement, nouvelle attestation"},
+]
 
 
 def _fmt(d):
@@ -138,40 +159,40 @@ def _envoyer(destinataire, sujet, corps, bcc=None):
         _envoyer_brevo(destinataire, sujet, corps, bcc)
 
 
-def _mail_salarie(s, fin, jours, palier):
+def _mail_salarie(s, fin, jours, palier, doc=DOCUMENTS[0]):
     prenom = s["nom"].split()[-1].capitalize() if s["nom"].split() else ""
-    delai = "dans 3 mois" if palier == "relance_3m" else "dans 1 mois"
-    sujet = "Renouvellement de votre titre de séjour"
-    if palier == "relance_1m":
-        sujet = "2e rappel : renouvellement de votre titre de séjour"
+    delai = "dans 3 mois" if palier.endswith("relance_3m") else "dans 1 mois"
+    sujet = f"Renouvellement de {doc['votre']}"
+    if palier.endswith("relance_1m"):
+        sujet = f"2e rappel : renouvellement de {doc['votre']}"
+    v = doc["votre"]
     corps = (
         f"Bonjour {prenom},\n\n"
-        f"Votre titre de séjour arrive à échéance {delai}, le {_fmt(fin)}.\n\n"
-        "Pensez à faire votre demande de renouvellement dès maintenant si ce n'est pas déjà fait. "
-        "Dès que vous avez votre nouveau titre de séjour (ou le récépissé de demande), "
+        f"{v[0].upper() + v[1:]} arrive à échéance {delai}, le {_fmt(fin)}.\n\n"
+        f"Pensez à {doc['faire']} dès maintenant si ce n'est pas déjà fait. "
+        f"Dès que vous avez {doc['nouveau']}, "
         "merci de nous en transmettre une copie.\n\n"
-        "Sans document valable à la date d'échéance, nous ne pourrons malheureusement pas "
-        "maintenir votre planning.\n\n"
+        f"{doc['fin']}"
         "Pour toute question, n'hésitez pas à contacter le service administratif.\n\n"
         "Bonne journée,\nLe service administratif AID'Aux"
     )
     return sujet, corps
 
 
-def _mail_alerte(s, fin, jours):
+def _mail_alerte(s, fin, jours, doc=DOCUMENTS[0]):
     if jours < 0:
         quand = f"est EXPIRÉ depuis le {_fmt(fin)}"
     elif jours == 0:
         quand = "expire AUJOURD'HUI"
     else:
         quand = f"expire dans {jours} jours, le {_fmt(fin)}"
-    sujet = f"⚠️ Alerte titre de séjour : {s['nom']} ({s['agence']})"
+    sujet = f"⚠️ {doc['Alerte']} : {s['nom']} ({s['agence']})"
     corps = (
         "Bonjour Marie,\n\n"
-        f"Le titre de séjour de {s['nom']} (agence {s['agence']}) {quand}.\n\n"
-        "Aucun nouveau titre n'a été enregistré dans Aid'Aux Dossiers. "
+        f"{doc['le'][0].upper() + doc['le'][1:]} de {s['nom']} (agence {s['agence']}) {quand}.\n\n"
+        f"Aucune nouvelle date de validité n'a été enregistrée pour {doc['le']} dans Aid'Aux Dossiers. "
         f"{'Les deux relances par mail ont été envoyées au salarié.' if s.get('email') else 'Aucune adresse mail n’est renseignée pour ce salarié : il n’a pas reçu de relance.'}\n\n"
-        "Merci de faire le point avec lui/elle rapidement (récépissé de demande, nouveau titre).\n\n"
+        f"Merci de faire le point avec lui/elle rapidement ({doc['point']}).\n\n"
         "Message automatique — Aid'Aux Dossiers"
     )
     return sujet, corps
@@ -185,10 +206,10 @@ def lancer_relances(aujourdhui=None):
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute("SELECT id, nom, agence, email, docs, ech FROM dossiers_salaries WHERE actif")
             salaries = cur.fetchall()
-            for s in salaries:
-                if not _a_un_titre_de_sejour(s["docs"]):
+            for s, doc in ((s, doc) for s in salaries for doc in DOCUMENTS):
+                if not doc["suivi"](s["docs"]):
                     continue
-                e = (s["ech"] or {}).get("piece") or {}
+                e = (s["ech"] or {}).get(doc["ech"]) or {}
                 if e.get("nc") or not e.get("date"):
                     continue
                 try:
@@ -201,31 +222,32 @@ def lancer_relances(aujourdhui=None):
                 if not atteint:
                     continue
                 code, _ = atteint
+                pre = doc["prefixe"]
                 cur.execute(
                     "SELECT 1 FROM dossiers_relances WHERE salarie_id=%s AND date_validite=%s AND palier=%s",
-                    (s["id"], fin, code),
+                    (s["id"], fin, pre + code),
                 )
                 if cur.fetchone():
                     continue
                 try:
                     if code == "alerte_15j":
                         dest = ALERTE_EMAIL
-                        sujet, corps = _mail_alerte(s, fin, jours)
+                        sujet, corps = _mail_alerte(s, fin, jours, doc)
                         _envoyer(dest, sujet, corps)
-                        news = (f"Alerte envoyée à Marie : titre de séjour de {s['nom']} "
+                        news = (f"Alerte envoyée à Marie : {doc['nom']} de {s['nom']} "
                                 f"{'expiré' if jours < 0 else 'expire le ' + _fmt(fin)}")
                     elif s.get("email"):
                         dest = s["email"].strip()
-                        sujet, corps = _mail_salarie(s, fin, jours, code)
+                        sujet, corps = _mail_salarie(s, fin, jours, code, doc)
                         _envoyer(dest, sujet, corps, bcc=COPIE_RH or None)
                         num = "1re" if code == "relance_3m" else "2e"
-                        news = f"{num} relance titre de séjour envoyée à {s['nom']}"
+                        news = f"{num} relance {doc['nom']} envoyée à {s['nom']}"
                     else:
                         dest = None
                         num = "1re" if code == "relance_3m" else "2e"
-                        news = f"{num} relance titre de séjour de {s['nom']} non envoyée : pas d’email renseigné"
+                        news = f"{num} relance {doc['nom']} de {s['nom']} non envoyée : pas d’email renseigné"
                 except Exception as err:  # on continue avec les autres salariés
-                    rapport.append({"salarie": s["nom"], "palier": code, "erreur": str(err)})
+                    rapport.append({"salarie": s["nom"], "palier": pre + code, "erreur": str(err)})
                     continue
                 # On marque ce palier (et les paliers moins urgents) comme traités
                 for c, n in PALIERS:
@@ -233,14 +255,14 @@ def lancer_relances(aujourdhui=None):
                         cur.execute(
                             """INSERT INTO dossiers_relances (salarie_id, date_validite, palier, envoye_a)
                                VALUES (%s, %s, %s, %s) ON CONFLICT DO NOTHING""",
-                            (s["id"], fin, c, dest if c == code else None),
+                            (s["id"], fin, pre + c, dest if c == code else None),
                         )
                 cur.execute(
                     "INSERT INTO dossiers_feed (texte, couleur, auteur) VALUES (%s, %s, %s)",
                     (news[:300], "coral", "relance automatique"),
                 )
                 conn.commit()
-                rapport.append({"salarie": s["nom"], "palier": code, "envoye_a": dest, "jours": jours})
+                rapport.append({"salarie": s["nom"], "palier": pre + code, "envoye_a": dest, "jours": jours})
     finally:
         conn.close()
     return rapport
