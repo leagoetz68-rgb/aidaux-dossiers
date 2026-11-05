@@ -186,6 +186,7 @@ a.ghost{text-decoration:none}
 .t-pres,.t-ver{display:flex;justify-content:center}
 .t-wide{grid-column:2 / -1}
 .trow .com{border:1px solid var(--line);border-radius:8px;padding:6px 9px;background:var(--bg);font-size:13px;width:100%}
+.cmu{margin-top:4px;font-size:13px;font-weight:600}
 .ptypes{display:flex;flex-direction:column;gap:3px;align-items:flex-start}
 .cl-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:4px 12px}
 .cbx{display:inline-flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;user-select:none}
@@ -497,7 +498,7 @@ function ligneDoc(a,k,lab){
     pres=`<div class="ptypes">${Object.entries(PIECE_T).map(([v,t])=>cb(`data-ptyp="${v}" aria-label="${t}"`,!!ty[v],t,nc)).join("")}</div>`;
   } else pres=cb(`data-pres="${k}" aria-label="${lab} présent dans le dossier"`,present(d),"",nc);
   return `<div class="trow ${nc?"is-nc":""} ${d.s==="verifie"?"is-ok":""}">
-    <div class="t-doc">${lab}</div>
+    <div class="t-doc">${lab}${k==="cpam"?`<div class="cmu">${cb(`data-cmu aria-label="Le salarié a la CMU"`,!!d.cmu,"CMU")}</div>`:""}</div>
     <div class="t-pres">${pres}</div>
     <div class="t-com"><input class="com" data-com="${k}" value="${esc(d.c)}" placeholder="Commentaire" aria-label="Commentaire ${lab}"></div>
     <div class="t-ver">${cb(`data-ver="${k}" aria-label="${lab} vérifié"`,d.s==="verifie","",nc)}</div>
@@ -772,6 +773,8 @@ document.addEventListener("change",ev=>{
   if(t.type==="date"&&(t.dataset.saisie||(t.value&&horsBornes(t))))return; // saisie en cours
   const a=UI.open&&find(UI.open);if(!a)return;
   if(t.dataset.com){a.docs[t.dataset.com].c=t.value;push(a);return}
+  // CMU : simple information, ne compte pas dans le dossier complet
+  if(t.hasAttribute("data-cmu")){a.docs.cpam.cmu=t.checked;render();push(a);return}
   if(t.dataset.viec){a.vie[t.dataset.viec].c=t.value;push(a);return}
   if(t.dataset.vief){const k=t.dataset.vief,v=a.vie[k];v.fait=t.checked;v.le=t.checked?new Date().toISOString().slice(0,10):"";
     let news=null;
