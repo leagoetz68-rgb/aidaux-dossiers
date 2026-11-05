@@ -586,7 +586,7 @@ function fiche(a){
 
    ${accHead("admin","🗂️","Dossier administratif obligatoire","Pièces, signatures, classeur et Digiposte",`${p.v} / ${p.t}`,p.v===p.t?"ok":"bad")}
    <div class="acc-body" ${UI.acc.admin?"":"hidden"}><div class="sec dossier">
-     <div class="dates" style="margin-bottom:6px"><label>Date du dossier<input type="date" min="2026-01-01" max="2040-12-31" data-date="dossier" value="${a.dates.dossier||""}"></label><label>Email du salarié <small>(relances titre de séjour)</small><input type="email" data-email value="${esc(a.email||"")}" placeholder="prenom.nom@exemple.fr" autocomplete="off"></label></div>
+     <div class="dates" style="margin-bottom:6px"><label>Date du dossier<input type="date" min="2026-01-01" max="2040-12-31" data-date="dossier" value="${a.dates.dossier||""}"></label><label>Email du salarié <small>(relances titre de séjour &amp; CSS)</small><input type="email" data-email value="${esc(a.email||"")}" placeholder="prenom.nom@exemple.fr" autocomplete="off"></label></div>
      <h4>Documents obligatoires <small>présents dans le dossier</small></h4>
      <div class="table">${thead}${DOCS_OBL.map(([k,l])=>ligneDoc(a,k,l)).join("")}</div>
      <h4>Documents à faire signer</h4>
