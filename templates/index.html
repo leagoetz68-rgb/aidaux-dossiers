@@ -442,7 +442,7 @@ function renderAdd(){
   z.innerHTML=`<div class="detail" style="margin-bottom:14px"><h3 style="font-size:20px;margin-bottom:10px">Ajouter un salarié</h3>
    <div class="dates">
     <label>Nom et prénom<input id="fNom" placeholder="DUPONT Marie" autocomplete="off"></label>
-    <label>Date d’embauche<input type="date" min="1900-01-01" max="2100-12-31" id="fEmb"></label>
+    <label>Date d’embauche<input type="date" min="2000-01-01" max="2040-12-31" id="fEmb"></label>
    </div>
    <div class="sub" role="radiogroup" aria-label="Où le placer">
     <button class="tick" data-ph="arrivee" aria-pressed="true">Nouvelle arrivée : dossier d’embauche à compléter</button>
@@ -531,8 +531,8 @@ function carteEch(a,k,ico,titre,ek){
     <div class="v-body">
       <div class="count st-${c.k}"><b>${c.n}</b><small>${c.u}</small></div>
       <div class="v-fields">
-        <label>${k==="css"?"Valable jusqu’au":"Prochaine échéance"}<input type="date" min="1900-01-01" max="2100-12-31" data-echd="${ek}|date" value="${e.date||""}" ${e.nc?"disabled":""}></label>
-        ${k==="css"?"":`<label>RDV pris le<span class="rdvrow"><input type="date" min="1900-01-01" max="2100-12-31" data-echd="${ek}|rdv" value="${e.rdv||""}" ${e.nc?"disabled":""}>${e.rdv?`<button class="x" data-vunrdv="${ek}" title="Retirer le RDV" aria-label="Retirer le RDV">×</button>`:""}</span></label>`}
+        <label>${k==="css"?"Valable jusqu’au":"Prochaine échéance"}<input type="date" min="2026-01-01" max="2040-12-31" data-echd="${ek}|date" value="${e.date||""}" ${e.nc?"disabled":""}></label>
+        ${k==="css"?"":`<label>RDV pris le<span class="rdvrow"><input type="date" min="2026-01-01" max="2040-12-31" data-echd="${ek}|rdv" value="${e.rdv||""}" ${e.nc?"disabled":""}>${e.rdv?`<button class="x" data-vunrdv="${ek}" title="Retirer le RDV" aria-label="Retirer le RDV">×</button>`:""}</span></label>`}
       </div>
     </div>
     <div class="v-row">${cb(`data-vief="${k}"`,v.fait,faitLab+(v.fait&&v.le?` <small>(${fmt(v.le)})</small>`:""),e.nc)}
@@ -544,7 +544,7 @@ function carteAvenants(a){
   const L=a.vie.avenants,ns=L.filter(x=>!x.signe).length;
   const st=ns?"bad":"ok";
   const lignes=L.length?L.map((av,i)=>`<div class="av-l ${av.signe?"is-ok":""}">
-      <input type="date" min="1900-01-01" max="2100-12-31" data-av="${i}|date" value="${av.date||""}" aria-label="Date de l’avenant">
+      <input type="date" min="2026-01-01" max="2040-12-31" data-av="${i}|date" value="${av.date||""}" aria-label="Date de l’avenant">
       <input class="com" data-av="${i}|c" value="${esc(av.c)}" placeholder="Objet : heures, poste, durée…" aria-label="Objet de l’avenant">
       ${cb(`data-av="${i}|signe"`,av.signe,"Signé")}
       <button class="x" data-avdel="${i}" title="Supprimer" aria-label="Supprimer cet avenant">×</button></div>`).join("")
@@ -586,7 +586,7 @@ function fiche(a){
 
    ${accHead("admin","🗂️","Dossier administratif obligatoire","Pièces, signatures, classeur et Digiposte",`${p.v} / ${p.t}`,p.v===p.t?"ok":"bad")}
    <div class="acc-body" ${UI.acc.admin?"":"hidden"}><div class="sec dossier">
-     <div class="dates" style="margin-bottom:6px"><label>Date du dossier<input type="date" min="1900-01-01" max="2100-12-31" data-date="dossier" value="${a.dates.dossier||""}"></label><label>Email du salarié <small>(relances titre de séjour)</small><input type="email" data-email value="${esc(a.email||"")}" placeholder="prenom.nom@exemple.fr" autocomplete="off"></label></div>
+     <div class="dates" style="margin-bottom:6px"><label>Date du dossier<input type="date" min="2026-01-01" max="2040-12-31" data-date="dossier" value="${a.dates.dossier||""}"></label><label>Email du salarié <small>(relances titre de séjour)</small><input type="email" data-email value="${esc(a.email||"")}" placeholder="prenom.nom@exemple.fr" autocomplete="off"></label></div>
      <h4>Documents obligatoires <small>présents dans le dossier</small></h4>
      <div class="table">${thead}${DOCS_OBL.map(([k,l])=>ligneDoc(a,k,l)).join("")}</div>
      <h4>Documents à faire signer</h4>
@@ -595,7 +595,7 @@ function fiche(a){
          <div class="t-wide"><div class="cl-list">${CLASSEUR.map(([k,l])=>cb(`data-cl="${k}"`,!!a.classeur[k],l)).join("")}</div></div></div>
      </div>
      <h4>Digiposte</h4>
-     <div class="dates">${DATES.map(([k,l])=>`<label>${l}<input type="date" min="1900-01-01" max="2100-12-31" data-date="${k}" value="${a.dates[k]||""}"></label>`).join("")}</div>
+     <div class="dates">${DATES.map(([k,l])=>`<label>${l}<input type="date" min="2026-01-01" max="2040-12-31" data-date="${k}" value="${a.dates[k]||""}"></label>`).join("")}</div>
      <p class="note">Les cases sont enregistrées dès qu’on les coche. « Vérifié » coche aussi « Présent ».</p>
    </div></div>
    ${vieSection(a)}
@@ -605,8 +605,8 @@ function fiche(a){
 function editor(p,k){
   const e=p.ech[k],l=ECH.find(x=>x[0]===k)[1];
   return `<div class="editor"><b style="width:100%">${l}</b>
-   <label>Nouvelle date de validité<input type="date" min="1900-01-01" max="2100-12-31" id="edDate" value="${e.date||""}"></label><button class="btn teal" data-save>Enregistrer</button>
-   <label>RDV pris le<input type="date" min="1900-01-01" max="2100-12-31" id="edRdv" value="${e.rdv||""}"></label><button class="btn light" data-rdv>Noter le RDV</button>
+   <label>Nouvelle date de validité<input type="date" min="2026-01-01" max="2040-12-31" id="edDate" value="${e.date||""}"></label><button class="btn teal" data-save>Enregistrer</button>
+   <label>RDV pris le<input type="date" min="2026-01-01" max="2040-12-31" id="edRdv" value="${e.rdv||""}"></label><button class="btn light" data-rdv>Noter le RDV</button>
    ${e.rdv?`<button class="btn light" data-unrdv>Retirer le RDV</button>`:""}
    <button class="nc" data-ncech aria-pressed="${!!e.nc}">Non concerné</button></div>`;
 }
@@ -760,15 +760,16 @@ document.addEventListener("click",async ev=>{
    et on perdait la main sur le champ -> année bloquée à « 0026 ».
    On attend donc la fin de la saisie (sortie du champ ou Entrée) avant d'enregistrer.
    Le calendrier (clic sur l'icône) enregistre tout de suite. */
+function horsBornes(t){return (t.min&&t.value<t.min)||(t.max&&t.value>t.max)}
 document.addEventListener("keydown",ev=>{const t=ev.target;if(t.type==="date"){
   if(ev.key==="Enter"){t.blur();return}t.dataset.saisie="1"}},true);
 document.addEventListener("focusout",ev=>{const t=ev.target;if(t.type!=="date"||!t.dataset.saisie)return;
-  delete t.dataset.saisie;const y=+(t.value||"0").slice(0,4);
-  if(t.value&&y<1900){toast("Année incomplète : tapez l’année sur 4 chiffres (ex. 2026)");return}
+  delete t.dataset.saisie;
+  if(t.value&&horsBornes(t)){toast("Année impossible : choisissez entre "+t.min.slice(0,4)+" et "+t.max.slice(0,4));return}
   t.dispatchEvent(new Event("change",{bubbles:true}))},true);
 document.addEventListener("change",ev=>{
   const t=ev.target;
-  if(t.type==="date"&&(t.dataset.saisie||(t.value&&+t.value.slice(0,4)<1900)))return; // saisie en cours
+  if(t.type==="date"&&(t.dataset.saisie||(t.value&&horsBornes(t))))return; // saisie en cours
   const a=UI.open&&find(UI.open);if(!a)return;
   if(t.dataset.com){a.docs[t.dataset.com].c=t.value;push(a);return}
   if(t.dataset.viec){a.vie[t.dataset.viec].c=t.value;push(a);return}
