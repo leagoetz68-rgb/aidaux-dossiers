@@ -794,7 +794,9 @@ document.addEventListener("change",ev=>{
     if(t.dataset.ver==="piece"&&t.checked&&!Object.values(d.types||{}).some(Boolean)){d.types={...(d.types||{}),[d.t||"cni"]:true}}coche=true}
   if(t.dataset.ptyp){const d=a.docs.piece;d.types=d.types||{};d.types[t.dataset.ptyp]=t.checked;
     const un=Object.keys(PIECE_T).find(x=>d.types[x]);if(un)d.t=un;
-    d.s=un?(d.s==="verifie"?"verifie":"recu"):"manquant";coche=true}
+    // Pièce valable : CNI seule, OU passeport + titre de séjour ensemble
+    const ok=d.types.cni||(d.types.passeport&&d.types.titre);
+    d.s=ok?(d.s==="verifie"?"verifie":"recu"):"manquant";coche=true}
   if(t.dataset.cl){a.classeur[t.dataset.cl]=t.checked;coche=true}
   if(coche){render();if(!checkDone(a))push(a)}
 });
