@@ -296,6 +296,11 @@ a.ghost{text-decoration:none}
 
 /* date qui approche mais encore valide = à jour (vert), sauf médecine (bleu) */
 .vcard.st-warn{border-left-color:var(--ok)}
+/* RDV pris = c'est géré : vert, comme « À jour » */
+.vcard.st-rdv{border-left-color:var(--ok)}
+.vcard.st-rdv .v-st,.count.st-rdv{background:var(--ok-soft);color:var(--ok)}
+.pill.st-rdv{background:var(--ok-soft)!important;color:var(--ok)!important}
+.dot.st-rdv{background:var(--ok)!important;border:none!important}
 .vcard.st-warn .v-st,.count.st-warn,.pill.st-warn,.acc-badge.st-warn{background:var(--ok-soft)!important;color:var(--ok)!important}
 .dot.st-warn{background:var(--ok)!important}
 .vcard.vc-medecine.st-warn{border-left-color:#1F5FBF}
@@ -397,6 +402,8 @@ function push(p,news){
 
 function echStatus(e,th){
   if(e&&e.nc)return{k:"nc",t:"Non concerné",s:""};
+  // RDV passé sans mise à jour = en retard (rouge) ; RDV à venir = géré (vert)
+  if(e&&e.rdv&&days(e.rdv)<0)return{k:"bad",t:"RDV passé – à mettre à jour",s:"RDV du "+fmt(e.rdv)};
   if(e&&e.rdv)return{k:"rdv",t:"RDV le "+fmt(e.rdv),s:e.date?"valide jusqu’au "+fmt(e.date):""};
   if(!e||!e.date)return{k:"vide",t:"À renseigner",s:""};
   const d=days(e.date);
@@ -523,7 +530,7 @@ function accHead(k,ico,titre,sous,badge,st){
 }
 function compte(e,th){
   if(e.nc)return{n:"—",u:"non concerné",k:"nc"};
-  if(e.rdv){const d=days(e.rdv);return{n:d>=0?"J-"+d:"J+"+(-d),u:"avant le RDV du "+fmt(e.rdv),k:"rdv"}}
+  if(e.rdv){const d=days(e.rdv);return d>=0?{n:"J-"+d,u:"avant le RDV du "+fmt(e.rdv),k:"rdv"}:{n:"+"+(-d)+" j",u:"depuis le RDV du "+fmt(e.rdv)+" : mettre à jour",k:"bad"}}
   if(!e.date)return{n:"?",u:"date à renseigner",k:"vide"};
   const d=days(e.date);
   if(d<0)return{n:"+"+(-d)+" j",u:"de retard",k:"bad"};
