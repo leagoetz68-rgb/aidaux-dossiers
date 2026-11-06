@@ -58,6 +58,11 @@ def init_db():
             cur.execute(
                 "ALTER TABLE dossiers_salaries ADD COLUMN IF NOT EXISTS vie JSONB NOT NULL DEFAULT '{}'::jsonb"
             )
+            # Archives : salariés partis d'AID'Aux (gardés, consultables, désarchivables)
+            cur.execute(
+                "ALTER TABLE dossiers_salaries ADD COLUMN IF NOT EXISTS archive BOOLEAN NOT NULL DEFAULT FALSE"
+            )
+            cur.execute("ALTER TABLE dossiers_salaries ADD COLUMN IF NOT EXISTS archive_le DATE")
             # Fil d'actualité affiché en haut de l'appli
             cur.execute(
                 """
@@ -82,6 +87,7 @@ relances.init_db()
 def _salarie(row):
     d = dict(row)
     d["embauche"] = d["embauche"].isoformat() if d.get("embauche") else ""
+    d["archive_le"] = d["archive_le"].isoformat() if d.get("archive_le") else ""
     for k in ("created_at", "updated_at"):
         d.pop(k, None)
     return d
@@ -123,10 +129,12 @@ def api_etat():
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute("SELECT * FROM dossiers_salaries WHERE actif ORDER BY nom")
             salaries = [_salarie(r) for r in cur.fetchall()]
+            cur.execute("SELECT * FROM dossiers_salaries WHERE NOT actif AND archive ORDER BY nom")
+            archives = [_salarie(r) for r in cur.fetchall()]
             feed = _feed(cur)
     finally:
         conn.close()
-    return jsonify({"ok": True, "salaries": salaries, "feed": feed, "agences": AGENCES})
+    return jsonify({"ok": True, "salaries": salaries, "archives": archives, "feed": feed, "agences": AGENCES})
 
 
 @app.route("/api/salaries", methods=["POST"])
@@ -214,6 +222,32 @@ def api_retirer(sid):
     finally:
         conn.close()
     return jsonify({"ok": True})
+
+
+@app.route("/api/salaries/<int:sid>/archive", methods=["POST"])
+def api_archiver(sid):
+    # archive=true : départ d'AID'Aux (sorti des listes et des relances, gardé
+    # dans « Archives ») ; archive=false : retour dans les listes.
+    archiver = bool((request.get_json(silent=True) or {}).get("archive", True))
+    conn = auth._conn()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """UPDATE dossiers_salaries SET actif = %s, archive = %s,
+                   archive_le = CASE WHEN %s THEN CURRENT_DATE ELSE NULL END,
+                   updated_at = now(), updated_by = %s WHERE id = %s RETURNING *""",
+                (not archiver, archiver, archiver, session.get("user_email"), sid),
+            )
+            row = cur.fetchone()
+            if not row:
+                return jsonify({"ok": False, "erreur": "Salarié introuvable"}), 404
+            salarie = _salarie(row)
+            _ajouter_news(cur, {"txt": f"{salarie['nom']} {'a quitté AID’Aux (archivé)' if archiver else 'est de retour (désarchivé)'}"})
+            feed = _feed(cur)
+        conn.commit()
+    finally:
+        conn.close()
+    return jsonify({"ok": True, "salarie": salarie, "feed": feed})
 
 
 # --- Application installable (écran d'accueil iPhone / Android) ---
