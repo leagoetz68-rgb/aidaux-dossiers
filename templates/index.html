@@ -335,7 +335,7 @@ a.ghost{text-decoration:none}
 </header>
 <div class="wrap">
   <nav class="bar-tabs" aria-label="Espaces">
-    <button class="tab" data-tab="arrivees">Arrivées<span class="n" id="nA"></span></button>
+    <span id="nA" hidden></span>
     <button class="tab" data-tab="poste">En poste<span class="n" id="nP"></span></button>
     <button class="tab" data-tab="archives">Archives<span class="n n-gris" id="nR"></span></button>
     <span class="spacer"></span>
@@ -371,7 +371,7 @@ const STATUS_LAB={manquant:"Manquant",recu:"Reçu",verifie:"Vérifié",nc:"Non c
 const labelOf=k=>([...DOCS_OBL,...DOCS_SIGN].find(x=>x[0]===k)||[,k])[1];
 
 let S={arrivees:[],poste:[],feed:[]},LOADED=false,ERR="";
-let UI={acc:{admin:false,vie:false},tab:"arrivees",agence:"Toutes",open:null,editor:null,onlyTodo:true,adding:false,addErr:""};
+let UI={acc:{admin:false,vie:false},tab:"poste",agence:"Toutes",open:null,editor:null,onlyTodo:true,adding:false,addErr:""};
 
 function norm(p){
   p.docs=p.docs||{};[...DOCS_OBL,...DOCS_SIGN].forEach(([k])=>{if(!p.docs[k])p.docs[k]={s:"manquant",c:""}});
@@ -394,7 +394,7 @@ async function api(url,opt={}){
 }
 async function load(){
   try{const j=await api("/api/etat");S.feed=j.feed||[];S.arrivees=[];S.poste=[];S.archives=(j.archives||[]).map(norm);
-    (j.salaries||[]).map(norm).forEach(p=>(p.phase==="poste"?S.poste:S.arrivees).push(p));LOADED=true;ERR=""}
+    (j.salaries||[]).map(norm).forEach(p=>S.poste.push(p));LOADED=true;ERR=""}
   catch(e){if(e.message!=="login")ERR=e.message}
   render();
 }
@@ -692,7 +692,7 @@ async function archiver(id,oui){
     S.feed=j.feed||S.feed;
     S.arrivees=S.arrivees.filter(x=>x!==p);S.poste=S.poste.filter(x=>x!==p);S.archives=(S.archives||[]).filter(x=>x!==p);
     const n=norm(j.salarie);
-    if(oui)S.archives.push(n);else{(n.phase==="poste"?S.poste:S.arrivees).push(n);UI.tab=n.phase==="poste"?"poste":"arrivees"}
+    if(oui)S.archives.push(n);else{S.poste.push(n);UI.tab="poste"}
     UI.open=oui?null:n.id;UI.editor=null;render();renderFeed();toast(p.nom+(oui?" archivé(e)":" désarchivé(e)"))}
   catch(e){toast("Impossible : "+e.message)}
 }
@@ -789,8 +789,8 @@ document.addEventListener("click",async ev=>{
     if(!nom){document.getElementById("fErr").textContent="Indiquez le nom et le prénom";return}
     t.disabled=true;
     try{const j=await api("/api/salaries",{method:"POST",body:JSON.stringify({nom,agence,embauche,phase})});
-      const p=norm(j.salarie);(p.phase==="poste"?S.poste:S.arrivees).push(p);S.feed=j.feed||S.feed;
-      UI.adding=false;UI.tab=p.phase==="poste"?"poste":"arrivees";if(p.phase==="poste")UI.onlyTodo=true;render();toast(nom+" ajouté(e)")}
+      const p=norm(j.salarie);S.poste.push(p);S.feed=j.feed||S.feed;
+      UI.adding=false;UI.tab="poste";UI.onlyTodo=false;UI.open=p.id;render();toast(nom+" ajouté(e)")}
     catch(e){t.disabled=false;document.getElementById("fErr").textContent=e.message}
     return;
   }
