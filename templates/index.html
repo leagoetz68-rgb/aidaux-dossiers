@@ -163,6 +163,9 @@ a.ghost{text-decoration:none}
 .li-row{display:flex;align-items:center;gap:2px}
 .li-x{flex:none;width:28px;height:28px;border:none;background:none;border-radius:8px;color:var(--ink2);font-size:20px;line-height:1;cursor:pointer}
 .li-x:hover{background:#fde2e2;color:#c62828}
+.li-x.li-arch{font-size:15px}
+.li-x.li-arch:hover{background:var(--bg);color:var(--ink)}
+.tab .n.n-gris{background:var(--line);color:var(--ink2)}
 .li.active{background:var(--teal-soft);border-color:var(--teal)}
 .li .av{width:36px;height:36px;font-size:12.5px}
 .li-t{flex:1;min-width:0}
@@ -334,6 +337,7 @@ a.ghost{text-decoration:none}
   <nav class="bar-tabs" aria-label="Espaces">
     <button class="tab" data-tab="arrivees">Arrivées<span class="n" id="nA"></span></button>
     <button class="tab" data-tab="poste">En poste<span class="n" id="nP"></span></button>
+    <button class="tab" data-tab="archives">Archives<span class="n n-gris" id="nR"></span></button>
     <span class="spacer"></span>
     <span id="filters"></span>
   </nav>
@@ -389,7 +393,7 @@ async function api(url,opt={}){
   return j;
 }
 async function load(){
-  try{const j=await api("/api/etat");S.feed=j.feed||[];S.arrivees=[];S.poste=[];
+  try{const j=await api("/api/etat");S.feed=j.feed||[];S.arrivees=[];S.poste=[];S.archives=(j.archives||[]).map(norm);
     (j.salaries||[]).map(norm).forEach(p=>(p.phase==="poste"?S.poste:S.arrivees).push(p));LOADED=true;ERR=""}
   catch(e){if(e.message!=="login")ERR=e.message}
   render();
@@ -449,6 +453,7 @@ function renderTabs(){
   const nA=S.arrivees.length,nP=S.poste.filter(todo).length;
   const a=document.getElementById("nA"),p=document.getElementById("nP");
   a.textContent=nA;a.style.display=nA?"":"none";p.textContent=nP;p.style.display=nP?"":"none";
+  const r=document.getElementById("nR"),nR=(S.archives||[]).length;r.textContent=nR;r.style.display=nR?"":"none";
   document.getElementById("filters").innerHTML="";
 }
 function renderAdd(){
@@ -476,6 +481,7 @@ const alpha=(x,y)=>x.nom.localeCompare(y.nom,"fr");
 const sansAcc=t=>String(t||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
 const trouve=p=>!UI.q||sansAcc(p.nom).includes(sansAcc(UI.q).trim());
 function listeOnglet(){
+  if(UI.tab==="archives")return byAg(S.archives||[]).filter(trouve).sort(alpha);
   if(UI.q)return byAg(UI.tab==="arrivees"?S.arrivees:S.poste).filter(trouve).sort(alpha);
   if(UI.tab==="arrivees")return byAg(S.arrivees).slice().sort(alpha);
   let l=byAg(S.poste);
@@ -483,13 +489,20 @@ function listeOnglet(){
   else l=l.slice().sort(alpha);
   return l;
 }
+function itemArchive(p){
+  const act=UI.open===p.id;
+  return `<div class="li-row"><button class="li ${act?"active":""}" data-open="${p.id}" aria-current="${act}">
+    <div class="av" style="opacity:.6">${initials(p.nom)}</div>
+    <div class="li-t"><b>${esc(p.nom)}</b><span>${p.archive_le?"Archivé(e) le "+fmt(p.archive_le):"Archivé(e)"}</span></div></button></div>`;
+}
 function itemListe(p){
+  if(UI.tab==="archives")return itemArchive(p);
   const pr=progress(p),act=UI.open===p.id;
   const dots=ECH.map(([k,l,th])=>{const s=echStatus(p.ech[k],th);return `<i class="dot st-${s.k}" title="${l} : ${s.t}"></i>`}).join("");
   return `<div class="li-row"><button class="li ${act?"active":""}" data-open="${p.id}" aria-current="${act}">
     <div class="av">${initials(p.nom)}</div>
     <div class="li-t"><b>${esc(p.nom)}</b><span>${p.embauche?"Embauché(e) le "+fmt(p.embauche):"&nbsp;"}</span>
-      <div class="li-m">${p.phase==="poste"?`<span class="dots">${dots}</span>`:""}<span class="mini"><i style="width:${pr.v/pr.t*100}%"></i></span><small>${pr.v}/${pr.t}</small></div></div></button><button class="li-x" data-retirer="${p.id}" title="Supprimer ${esc(p.nom)}" aria-label="Supprimer ${esc(p.nom)}">×</button></div>`;
+      <div class="li-m">${p.phase==="poste"?`<span class="dots">${dots}</span>`:""}<span class="mini"><i style="width:${pr.v/pr.t*100}%"></i></span><small>${pr.v}/${pr.t}</small></div></div></button><button class="li-x li-arch" data-archiver="${p.id}" title="Archiver ${esc(p.nom)} (a quitté AID’Aux)" aria-label="Archiver ${esc(p.nom)}">🗄</button><button class="li-x" data-retirer="${p.id}" title="Supprimer ${esc(p.nom)}" aria-label="Supprimer ${esc(p.nom)}">×</button></div>`;
 }
 function listeHTML(l,vide){
   if(l.length)return l.map(itemListe).join("");
@@ -509,13 +522,13 @@ function viewSplit(){
     const nTodo=byAg(S.poste).filter(todo).length;
     head+=`<div class="li-head"><button class="chip" data-only="1" aria-pressed="${UI.onlyTodo}">À traiter (${nTodo})</button><button class="chip" data-only="0" aria-pressed="${!UI.onlyTodo}">Tout le monde (${byAg(S.poste).length})</button></div>`;
   }
-  const vide=UI.tab==="arrivees"?`<div class="empty small">Aucune arrivée en cours.<br>Ajoutez un nouveau salarié pour suivre son dossier d’embauche.</div>`
+  const vide=UI.tab==="archives"?`<div class="empty small">Aucun salarié archivé.</div>`:UI.tab==="arrivees"?`<div class="empty small">Aucune arrivée en cours.<br>Ajoutez un nouveau salarié pour suivre son dossier d’embauche.</div>`
     :`<div class="empty small">Rien à traiter : dossiers complets et échéances à jour.<br><button class="chip" data-only="0" style="margin-top:8px">Voir tout le monde</button></div>`;
   const sel=UI.open&&find(UI.open);
   if(UI.open&&!sel)UI.open=null;
   return `<div class="split ${sel?"has-open":""}">
     <aside class="col-list" aria-label="Salariés">${head}<div class="li-wrap">${listeHTML(l,vide)}</div></aside>
-    <section class="col-pane">${sel?fiche(sel):`<div class="empty"><h3>Choisissez un salarié</h3>Cliquez sur un nom à gauche pour voir ses échéances et son dossier administratif.</div>`}</section>
+    <section class="col-pane">${sel?(UI.tab==="archives"?ficheArchive(sel):fiche(sel)):`<div class="empty"><h3>Choisissez un salarié</h3>Cliquez sur un nom à gauche pour voir ses échéances et son dossier administratif.</div>`}</section>
   </div>`;
 }
 const cb=(attr,checked,label,dis)=>`<label class="cbx"><input type="checkbox" ${attr} ${checked?"checked":""} ${dis?"disabled":""}><span class="box" aria-hidden="true"></span>${label?`<span>${label}</span>`:""}</label>`;
@@ -635,7 +648,7 @@ function fiche(a){
      <p class="note">Les cases sont enregistrées dès qu’on les coche. « Vérifié » coche aussi « Présent ».</p>
    </div></div>
    ${vieSection(a)}
-   <div class="sec" style="text-align:right"><button class="ghost" data-retirer="${a.id}">Retirer ce salarié (départ)</button></div>
+   <div class="sec" style="text-align:right"><button class="ghost" data-archiver="${a.id}">🗄 Archiver (a quitté AID’Aux)</button> <button class="ghost" data-retirer="${a.id}">Supprimer</button></div>
   </div>`;
 }
 function editor(p,k){
@@ -665,7 +678,24 @@ function checkDone(a){
   toast("Dossier de "+first(a.nom)+" bouclé ! Direction l’espace En poste");confetti();
   return true;
 }
-function find(id){return S.arrivees.find(x=>x.id===id)||S.poste.find(x=>x.id===id)}
+function find(id){return S.arrivees.find(x=>x.id===id)||S.poste.find(x=>x.id===id)||(S.archives||[]).find(x=>x.id===id)}
+function ficheArchive(a){
+  return `<div class="detail"><div class="dhead"><button class="ghost back-m" data-back>← Liste</button><div class="av">${initials(a.nom)}</div>
+    <div><h2 style="margin:0">${esc(a.nom)}</h2><small>${esc(a.agence||"")}${a.embauche?" · embauché(e) le "+fmt(a.embauche):""}${a.archive_le?" · archivé(e) le "+fmt(a.archive_le):""}</small></div></div>
+    <div class="empty" style="margin-top:14px">Ce salarié a quitté AID’Aux : son dossier est conservé ici, sans relances ni alertes.<br><br>
+    <button class="chip" data-desarchiver="${a.id}">↩ Désarchiver (retour dans la liste)</button></div></div>`;
+}
+async function archiver(id,oui){
+  const p=find(id);if(!p)return;
+  if(!confirm(oui?"Archiver "+p.nom+" ? (a quitté AID’Aux)":"Remettre "+p.nom+" dans la liste ?"))return;
+  try{const j=await api("/api/salaries/"+p.id+"/archive",{method:"POST",body:JSON.stringify({archive:oui})});
+    S.feed=j.feed||S.feed;
+    S.arrivees=S.arrivees.filter(x=>x!==p);S.poste=S.poste.filter(x=>x!==p);S.archives=(S.archives||[]).filter(x=>x!==p);
+    const n=norm(j.salarie);
+    if(oui)S.archives.push(n);else{(n.phase==="poste"?S.poste:S.arrivees).push(n);UI.tab=n.phase==="poste"?"poste":"arrivees"}
+    UI.open=oui?null:n.id;UI.editor=null;render();renderFeed();toast(p.nom+(oui?" archivé(e)":" désarchivé(e)"))}
+  catch(e){toast("Impossible : "+e.message)}
+}
 
 // ───── Import des emails depuis un export Excel de Ximi ─────
 const nk=x=>String(x||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-Z]+/g," ").trim();
@@ -766,6 +796,8 @@ document.addEventListener("click",async ev=>{
   }
   if(t.dataset.open){UI.open=t.dataset.open;UI.editor=null;render();if(innerWidth<=900)window.scrollTo({top:document.querySelector(".bar-tabs").offsetTop-10});return}
   if(t.hasAttribute("data-back")){UI.open=null;return render()}
+  if(t.dataset.archiver){await archiver(t.dataset.archiver,true);return}
+  if(t.dataset.desarchiver){await archiver(t.dataset.desarchiver,false);return}
   if(t.dataset.retirer){
     const p=find(t.dataset.retirer);if(!p||!confirm("Êtes-vous sûr(e) de vouloir supprimer "+p.nom+" ?"))return;
     try{await api("/api/salaries/"+p.id,{method:"DELETE"});S.arrivees=S.arrivees.filter(x=>x!==p);S.poste=S.poste.filter(x=>x!==p);UI.open=null;UI.editor=null;render();toast(p.nom+" supprimé(e)")}
