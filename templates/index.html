@@ -528,7 +528,6 @@ function compte(e,th){
 }
 function carteEch(a,k,ico,titre,ek){
   const th=ECH.find(x=>x[0]===ek)[2],e=a.ech[ek],v=a.vie[k],st=echStatus(e,th),c=compte(e,th);
-  const faitLab=k==="css"?"Attestation reçue":(k==="medecine"?"Visite faite":"Entretien fait");
   return `<article class="vcard st-${st.k} vc-${k}" id="vie-${ek}">
     <header><span class="v-ico" aria-hidden="true">${ico}</span><h4>${titre}</h4><span class="v-st">${st.t}</span></header>
     <div class="v-body">
@@ -538,7 +537,7 @@ function carteEch(a,k,ico,titre,ek){
         ${k==="css"?"":`<label>RDV pris le<span class="rdvrow"><input type="date" min="2026-01-01" max="2040-12-31" data-echd="${ek}|rdv" value="${e.rdv||""}" ${e.nc?"disabled":""}>${e.rdv?`<button class="x" data-vunrdv="${ek}" title="Retirer le RDV" aria-label="Retirer le RDV">×</button>`:""}</span></label>`}
       </div>
     </div>
-    <div class="v-row">${cb(`data-vief="${k}"`,v.fait,faitLab+(v.fait&&v.le?` <small>(${fmt(v.le)})</small>`:""),e.nc)}
+    <div class="v-row" style="justify-content:flex-end">
       <button class="nc" data-vnc="${ek}" aria-pressed="${!!e.nc}">N/C</button></div>
     <textarea class="v-com" data-viec="${k}" rows="2" placeholder="Commentaire…" aria-label="Commentaire ${titre}">${esc(v.c)}</textarea>
   </article>`;
