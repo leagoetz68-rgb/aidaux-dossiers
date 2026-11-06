@@ -10,6 +10,9 @@ les salariés qui ont une date « Valable jusqu'au » renseignée.
 
 Chaque mail n'est envoyé qu'une seule fois par document (table dossiers_relances).
 Quand une nouvelle date de validité est saisie, le cycle repart de zéro.
+
+Visite médecine du travail : rappel par mail au salarié 7 jours avant la
+date du RDV (champ « RDV pris le »), une seule fois par RDV.
 """
 import os
 from datetime import date
@@ -263,6 +266,73 @@ def lancer_relances(aujourdhui=None):
                 )
                 conn.commit()
                 rapport.append({"salarie": s["nom"], "palier": pre + code, "envoye_a": dest, "jours": jours})
+    finally:
+        conn.close()
+    rapport += lancer_rappels_medecine(aujourdhui)
+    return rapport
+
+
+# ---- Rappel visite médecine du travail : 7 jours avant le RDV ----
+RAPPEL_MEDECINE_JOURS = 7
+
+
+def _mail_medecine(s, rdv):
+    prenom = s["nom"].split()[-1].capitalize() if s["nom"].split() else ""
+    sujet = "Rappel : votre visite médicale du travail"
+    corps = (
+        f"Bonjour {prenom},\n\n"
+        f"Nous vous rappelons que vous avez rendez-vous pour votre visite médicale du travail "
+        f"le {_fmt(rdv)}.\n\n"
+        "Merci de bien vous y présenter. En cas d'empêchement, prévenez le service administratif "
+        "au plus vite afin de reprogrammer le rendez-vous.\n\n"
+        "Bonne journée,\nLe service administratif AID'Aux"
+    )
+    return sujet, corps
+
+
+def lancer_rappels_medecine(aujourdhui=None):
+    aujourdhui = aujourdhui or date.today()
+    rapport = []
+    conn = auth._conn()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT id, nom, agence, email, ech FROM dossiers_salaries WHERE actif")
+            for s in cur.fetchall():
+                e = (s["ech"] or {}).get("medecine") or {}
+                if e.get("nc") or not e.get("rdv") or not (s.get("email") or "").strip():
+                    continue
+                try:
+                    rdv = date.fromisoformat(e["rdv"][:10])
+                except ValueError:
+                    continue
+                jours = (rdv - aujourdhui).days
+                if not 0 <= jours <= RAPPEL_MEDECINE_JOURS:
+                    continue
+                cur.execute(
+                    "SELECT 1 FROM dossiers_relances WHERE salarie_id=%s AND date_validite=%s AND palier=%s",
+                    (s["id"], rdv, "medecine_7j"),
+                )
+                if cur.fetchone():
+                    continue
+                dest = s["email"].strip()
+                try:
+                    sujet, corps = _mail_medecine(s, rdv)
+                    _envoyer(dest, sujet, corps, bcc=COPIE_RH or None)
+                except Exception as err:
+                    rapport.append({"salarie": s["nom"], "palier": "medecine_7j", "erreur": str(err)})
+                    continue
+                cur.execute(
+                    """INSERT INTO dossiers_relances (salarie_id, date_validite, palier, envoye_a)
+                       VALUES (%s, %s, %s, %s) ON CONFLICT DO NOTHING""",
+                    (s["id"], rdv, "medecine_7j", dest),
+                )
+                cur.execute(
+                    "INSERT INTO dossiers_feed (texte, couleur, auteur) VALUES (%s, %s, %s)",
+                    (f"Rappel visite médicale du {_fmt(rdv)} envoyé à {s['nom']}"[:300], "coral",
+                     "relance automatique"),
+                )
+                conn.commit()
+                rapport.append({"salarie": s["nom"], "palier": "medecine_7j", "envoye_a": dest, "jours": jours})
     finally:
         conn.close()
     return rapport
