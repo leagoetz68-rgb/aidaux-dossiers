@@ -158,6 +158,9 @@ a.ghost{text-decoration:none}
 .li-wrap{overflow-y:auto;display:flex;flex-direction:column;gap:4px}
 .li{display:flex;gap:10px;align-items:center;text-align:left;width:100%;border:1px solid transparent;background:none;border-radius:12px;padding:8px}
 .li:hover{background:var(--bg)}
+.li-row{display:flex;align-items:center;gap:2px}
+.li-x{flex:none;width:28px;height:28px;border:none;background:none;border-radius:8px;color:var(--ink2);font-size:20px;line-height:1;cursor:pointer}
+.li-x:hover{background:#fde2e2;color:#c62828}
 .li.active{background:var(--teal-soft);border-color:var(--teal)}
 .li .av{width:36px;height:36px;font-size:12.5px}
 .li-t{flex:1;min-width:0}
@@ -469,10 +472,10 @@ function listeOnglet(){
 function itemListe(p){
   const pr=progress(p),act=UI.open===p.id;
   const dots=ECH.map(([k,l,th])=>{const s=echStatus(p.ech[k],th);return `<i class="dot st-${s.k}" title="${l} : ${s.t}"></i>`}).join("");
-  return `<button class="li ${act?"active":""}" data-open="${p.id}" aria-current="${act}">
+  return `<div class="li-row"><button class="li ${act?"active":""}" data-open="${p.id}" aria-current="${act}">
     <div class="av">${initials(p.nom)}</div>
     <div class="li-t"><b>${esc(p.nom)}</b><span>${p.embauche?"Embauché(e) le "+fmt(p.embauche):"&nbsp;"}</span>
-      <div class="li-m">${p.phase==="poste"?`<span class="dots">${dots}</span>`:""}<span class="mini"><i style="width:${pr.v/pr.t*100}%"></i></span><small>${pr.v}/${pr.t}</small></div></div></button>`;
+      <div class="li-m">${p.phase==="poste"?`<span class="dots">${dots}</span>`:""}<span class="mini"><i style="width:${pr.v/pr.t*100}%"></i></span><small>${pr.v}/${pr.t}</small></div></div></button><button class="li-x" data-retirer="${p.id}" title="Supprimer ${esc(p.nom)}" aria-label="Supprimer ${esc(p.nom)}">×</button></div>`;
 }
 function viewSplit(){
   const l=listeOnglet();
@@ -733,9 +736,9 @@ document.addEventListener("click",async ev=>{
   if(t.dataset.open){UI.open=t.dataset.open;UI.editor=null;render();if(innerWidth<=900)window.scrollTo({top:document.querySelector(".bar-tabs").offsetTop-10});return}
   if(t.hasAttribute("data-back")){UI.open=null;return render()}
   if(t.dataset.retirer){
-    const p=find(t.dataset.retirer);if(!p||!confirm("Retirer "+p.nom+" de la liste ? (départ de l’entreprise)"))return;
-    try{await api("/api/salaries/"+p.id,{method:"DELETE"});S.arrivees=S.arrivees.filter(x=>x!==p);S.poste=S.poste.filter(x=>x!==p);UI.open=null;UI.editor=null;render();toast(p.nom+" retiré(e)")}
-    catch(e){toast("Impossible de retirer : "+e.message)}
+    const p=find(t.dataset.retirer);if(!p||!confirm("Êtes-vous sûr(e) de vouloir supprimer "+p.nom+" ?"))return;
+    try{await api("/api/salaries/"+p.id,{method:"DELETE"});S.arrivees=S.arrivees.filter(x=>x!==p);S.poste=S.poste.filter(x=>x!==p);UI.open=null;UI.editor=null;render();toast(p.nom+" supprimé(e)")}
+    catch(e){toast("Impossible de supprimer : "+e.message)}
     return;
   }
   if(t.dataset.nc&&a){const d=a.docs[t.dataset.nc];d.s=d.s==="nc"?"manquant":"nc";render();if(!checkDone(a))push(a);return}
