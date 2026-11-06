@@ -292,8 +292,8 @@ a.ghost{text-decoration:none}
 
 /* Médecine du travail : BLEU quand la date approche */
 .pill.st-warn[data-ed$="|medecine"]{background:#E3EEFB!important;color:#1F5FBF!important}
-.dots .dot:nth-child(3).st-warn{background:#1F5FBF!important}
-@media (prefers-color-scheme:dark){.pill.st-warn[data-ed$="|medecine"]{background:#16294A!important;color:#8DB8F5!important}.dots .dot:nth-child(3).st-warn{background:#8DB8F5!important}}
+.dots .dot:nth-child(4).st-warn{background:#1F5FBF!important}
+@media (prefers-color-scheme:dark){.pill.st-warn[data-ed$="|medecine"]{background:#16294A!important;color:#8DB8F5!important}.dots .dot:nth-child(4).st-warn{background:#8DB8F5!important}}
 
 .vcard{background:var(--card)!important;color:var(--ink)!important;text-decoration:none!important}
 .vcard h4,.vcard .cbx,.vcard label{color:var(--ink)!important;text-decoration:none!important}
@@ -311,7 +311,7 @@ a.ghost{text-decoration:none}
 .dot.st-warn{background:var(--ok)!important}
 .vcard.vc-medecine.st-warn{border-left-color:#1F5FBF}
 .vcard.vc-medecine.st-warn .v-st,.vc-medecine .count.st-warn,.pill.st-warn[data-ed$="|medecine"]{background:#E3EEFB!important;color:#1F5FBF!important}
-.dots .dot:nth-child(3).st-warn{background:#1F5FBF!important}
+.dots .dot:nth-child(4).st-warn{background:#1F5FBF!important}
 </style>
 </head>
 <body data-user="{{ user_email }}">
@@ -498,11 +498,13 @@ function itemArchive(p){
 function itemListe(p){
   if(UI.tab==="archives")return itemArchive(p);
   const pr=progress(p),act=UI.open===p.id;
-  const dots=ECH.map(([k,l,th])=>{const s=echStatus(p.ech[k],th);return `<i class="dot st-${s.k}" title="${l} : ${s.t}"></i>`}).join("");
+  // 1re pastille = dossier administratif (rouge tant qu'il n'est pas complet ; la CMU ne compte pas)
+  const dots=`<i class="dot st-${pr.done?"ok":"bad"}" title="Dossier : ${pr.done?"complet":"incomplet ("+pr.v+"/"+pr.t+")"}"></i>`+
+    ECH.map(([k,l,th])=>{const s=echStatus(p.ech[k],th);return `<i class="dot st-${s.k}" title="${l} : ${s.t}"></i>`}).join("");
   return `<div class="li-row"><button class="li ${act?"active":""}" data-open="${p.id}" aria-current="${act}">
     <div class="av">${initials(p.nom)}</div>
     <div class="li-t"><b>${esc(p.nom)}</b><span>${p.embauche?"Embauché(e) le "+fmt(p.embauche):"&nbsp;"}</span>
-      <div class="li-m">${p.phase==="poste"?`<span class="dots">${dots}</span>`:""}<span class="mini"><i style="width:${pr.v/pr.t*100}%"></i></span><small>${pr.v}/${pr.t}</small></div></div></button><button class="li-x li-arch" data-archiver="${p.id}" title="Archiver ${esc(p.nom)} (a quitté AID’Aux)" aria-label="Archiver ${esc(p.nom)}">🗄</button><button class="li-x" data-retirer="${p.id}" title="Supprimer ${esc(p.nom)}" aria-label="Supprimer ${esc(p.nom)}">×</button></div>`;
+      <div class="li-m"><span class="dots">${dots}</span><span class="mini"><i style="width:${pr.v/pr.t*100}%"></i></span><small>${pr.v}/${pr.t}</small></div></div></button><button class="li-x li-arch" data-archiver="${p.id}" title="Archiver ${esc(p.nom)} (a quitté AID’Aux)" aria-label="Archiver ${esc(p.nom)}">🗄</button><button class="li-x" data-retirer="${p.id}" title="Supprimer ${esc(p.nom)}" aria-label="Supprimer ${esc(p.nom)}">×</button></div>`;
 }
 function listeHTML(l,vide){
   if(l.length)return l.map(itemListe).join("");
