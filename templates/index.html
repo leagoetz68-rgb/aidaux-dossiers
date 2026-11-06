@@ -154,6 +154,8 @@ a.ghost{text-decoration:none}
 /* ---- deux colonnes ---- */
 .split{display:grid;grid-template-columns:minmax(260px,340px) minmax(0,1fr);gap:16px;align-items:start}
 .col-list{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:10px;position:sticky;top:12px;max-height:calc(100vh - 24px);display:flex;flex-direction:column}
+.li-search{padding:4px 4px 8px}
+.li-search input{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font:inherit;background:var(--card);color:var(--ink)}
 .li-head{display:flex;gap:6px;flex-wrap:wrap;padding:4px 4px 10px;border-bottom:1px solid var(--line);margin-bottom:6px}
 .li-wrap{overflow-y:auto;display:flex;flex-direction:column;gap:4px}
 .li{display:flex;gap:10px;align-items:center;text-align:left;width:100%;border:1px solid transparent;background:none;border-radius:12px;padding:8px}
@@ -296,6 +298,7 @@ a.ghost{text-decoration:none}
 
 /* date qui approche mais encore valide = à jour (vert), sauf médecine (bleu) */
 .vcard.st-warn{border-left-color:var(--ok)}
+.av-l.is-vide{background:var(--bg)!important}
 /* RDV pris = c'est géré : vert, comme « À jour » */
 .vcard.st-rdv{border-left-color:var(--ok)}
 .vcard.st-rdv .v-st,.count.st-rdv{background:var(--ok-soft);color:var(--ok)}
@@ -469,10 +472,14 @@ function renderAdd(){
 // ---- Vue en deux colonnes : liste des salariés à gauche, fiche à droite ----
 function score(p){let m=9999;ECH.forEach(([k])=>{const e=p.ech[k];if(e.nc||e.rdv)return;if(!e.date)m=Math.min(m,-999);else m=Math.min(m,days(e.date))});return m}
 const alpha=(x,y)=>x.nom.localeCompare(y.nom,"fr");
+// Recherche par nom : sans accents ni majuscules, dans tout l'onglet
+const sansAcc=t=>String(t||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+const trouve=p=>!UI.q||sansAcc(p.nom).includes(sansAcc(UI.q).trim());
 function listeOnglet(){
+  if(UI.q)return byAg(UI.tab==="arrivees"?S.arrivees:S.poste).filter(trouve).sort(alpha);
   if(UI.tab==="arrivees")return byAg(S.arrivees).slice().sort(alpha);
   let l=byAg(S.poste);
-  if(UI.onlyTodo)l=l.filter(todo).sort((x,y)=>score(x)-score(y)||alpha(x,y));
+  if(UI.onlyTodo)l=l.filter(todo).sort(alpha);
   else l=l.slice().sort(alpha);
   return l;
 }
@@ -484,19 +491,30 @@ function itemListe(p){
     <div class="li-t"><b>${esc(p.nom)}</b><span>${p.embauche?"Embauché(e) le "+fmt(p.embauche):"&nbsp;"}</span>
       <div class="li-m">${p.phase==="poste"?`<span class="dots">${dots}</span>`:""}<span class="mini"><i style="width:${pr.v/pr.t*100}%"></i></span><small>${pr.v}/${pr.t}</small></div></div></button><button class="li-x" data-retirer="${p.id}" title="Supprimer ${esc(p.nom)}" aria-label="Supprimer ${esc(p.nom)}">×</button></div>`;
 }
+function listeHTML(l,vide){
+  if(l.length)return l.map(itemListe).join("");
+  return UI.q?`<div class="empty small">Aucun salarié ne correspond à « ${esc(UI.q)} ».</div>`:vide;
+}
+// on ne redessine que la liste pendant la frappe (le champ garde le curseur)
+document.addEventListener("input",ev=>{
+  if(ev.target.id!=="recherche")return;
+  UI.q=ev.target.value;
+  const w=document.querySelector(".col-list .li-wrap");
+  if(w)w.innerHTML=listeHTML(listeOnglet(),"");
+});
 function viewSplit(){
   const l=listeOnglet();
-  let head="";
+  let head=`<div class="li-search"><input type="search" id="recherche" value="${esc(UI.q||"")}" placeholder="🔍 Rechercher un salarié…" aria-label="Rechercher un salarié" autocomplete="off"></div>`;
   if(UI.tab==="poste"){
     const nTodo=byAg(S.poste).filter(todo).length;
-    head=`<div class="li-head"><button class="chip" data-only="1" aria-pressed="${UI.onlyTodo}">À traiter (${nTodo})</button><button class="chip" data-only="0" aria-pressed="${!UI.onlyTodo}">Tout le monde (${byAg(S.poste).length})</button></div>`;
+    head+=`<div class="li-head"><button class="chip" data-only="1" aria-pressed="${UI.onlyTodo}">À traiter (${nTodo})</button><button class="chip" data-only="0" aria-pressed="${!UI.onlyTodo}">Tout le monde (${byAg(S.poste).length})</button></div>`;
   }
   const vide=UI.tab==="arrivees"?`<div class="empty small">Aucune arrivée en cours.<br>Ajoutez un nouveau salarié pour suivre son dossier d’embauche.</div>`
     :`<div class="empty small">Rien à traiter : dossiers complets et échéances à jour.<br><button class="chip" data-only="0" style="margin-top:8px">Voir tout le monde</button></div>`;
   const sel=UI.open&&find(UI.open);
   if(UI.open&&!sel)UI.open=null;
   return `<div class="split ${sel?"has-open":""}">
-    <aside class="col-list" aria-label="Salariés">${head}<div class="li-wrap">${l.length?l.map(itemListe).join(""):vide}</div></aside>
+    <aside class="col-list" aria-label="Salariés">${head}<div class="li-wrap">${listeHTML(l,vide)}</div></aside>
     <section class="col-pane">${sel?fiche(sel):`<div class="empty"><h3>Choisissez un salarié</h3>Cliquez sur un nom à gauche pour voir ses échéances et son dossier administratif.</div>`}</section>
   </div>`;
 }
@@ -552,17 +570,23 @@ function carteEch(a,k,ico,titre,ek){
     <textarea class="v-com" data-viec="${k}" rows="2" placeholder="Commentaire…" aria-label="Commentaire ${titre}">${esc(v.c)}</textarea>
   </article>`;
 }
+// Un avenant vide (ni date ni objet) ne compte pas comme « à faire signer »
+const avVide=x=>!x.signe&&!x.date&&!String(x.c||"").trim();
+const avNonSigne=x=>!x.signe&&!avVide(x);
 function carteAvenants(a){
-  const L=a.vie.avenants,ns=L.filter(x=>!x.signe).length;
+  // ordre chronologique (plus ancien en haut) ; un avenant sans date
+  // (en cours de saisie) reste en haut pour être rempli
+  a.vie.avenants.sort((x,y)=>(x.date?1:0)-(y.date?1:0)||String(x.date||"").localeCompare(String(y.date||"")));
+  const L=a.vie.avenants,ns=L.filter(avNonSigne).length;
   const st=ns?"bad":"ok";
-  const lignes=L.length?L.map((av,i)=>`<div class="av-l ${av.signe?"is-ok":""}">
+  const lignes=L.length?L.map((av,i)=>`<div class="av-l ${av.signe?"is-ok":""} ${avVide(av)?"is-vide":""}">
       <input type="date" min="2026-01-01" max="2040-12-31" data-av="${i}|date" value="${av.date||""}" aria-label="Date de l’avenant">
       <input class="com" data-av="${i}|c" value="${esc(av.c)}" placeholder="Objet : heures, poste, durée…" aria-label="Objet de l’avenant">
       ${cb(`data-av="${i}|signe"`,av.signe,"Signé")}
       <button class="x" data-avdel="${i}" title="Supprimer" aria-label="Supprimer cet avenant">×</button></div>`).join("")
     :`<p class="v-empty">Aucun avenant pour l’instant.</p>`;
   return `<article class="vcard vc-av st-${st} wide" id="vie-avenants">
-    <header><span class="v-ico" aria-hidden="true">✍️</span><h4>Avenants</h4><span class="v-st">${L.length?(ns?ns+" à faire signer":"Tous signés"):"Aucun"}</span></header>
+    <header><span class="v-ico" aria-hidden="true">✍️</span><h4>Avenants</h4><span class="v-st">${L.some(x=>!avVide(x))?(ns?ns+" à faire signer":"Tous signés"):"Aucun"}</span></header>
     <div class="av-list">${lignes}</div>
     <button class="btn light av-add" data-avadd>+ Ajouter un avenant</button>
   </article>`;
@@ -572,7 +596,7 @@ function carteAvenants(a){
 function vieScore(a){
   let ok=0,t=0;
   VIE.forEach(([k,,,ek])=>{t++;const th=ECH.find(x=>x[0]===ek)[2],s=echStatus(a.ech[ek],th).k;if(s==="ok"||s==="nc"||s==="warn")ok++});
-  t++;if(!a.vie.avenants.some(x=>!x.signe))ok++;
+  t++;if(!a.vie.avenants.some(avNonSigne))ok++;
   return{ok,t};
 }
 function vieSection(a){
