@@ -538,7 +538,9 @@ function ligneDoc(a,k,lab){
   let pres;
   if(k==="piece"){
     const ty=d.types||{};
-    pres=`<div class="ptypes">${Object.entries(PIECE_T).map(([v,t])=>cb(`data-ptyp="${v}" aria-label="${t}"`,!!ty[v],t,nc)).join("")}</div>`;
+    // CNI cochée → passeport et titre masqués ; passeport ou titre cochés → CNI masquée
+    const visibles=Object.entries(PIECE_T).filter(([v])=>ty.cni?v==="cni":(ty.passeport||ty.titre)?v!=="cni":true);
+    pres=`<div class="ptypes">${visibles.map(([v,t])=>cb(`data-ptyp="${v}" aria-label="${t}"`,!!ty[v],t,nc)).join("")}</div>`;
   } else pres=cb(`data-pres="${k}" aria-label="${lab} présent dans le dossier"`,present(d),"",nc);
   return `<div class="trow ${nc?"is-nc":""} ${d.s==="verifie"?"is-ok":""}">
     <div class="t-doc">${lab}${k==="cpam"?`<div class="cmu">${cb(`data-cmu aria-label="Le salarié a la CMU"`,!!d.cmu,"CMU")}</div>`:""}</div>
@@ -859,6 +861,7 @@ document.addEventListener("change",ev=>{
   if(t.dataset.ver){const d=a.docs[t.dataset.ver];d.s=t.checked?"verifie":(d.s==="verifie"?"recu":d.s);
     if(t.dataset.ver==="piece"&&t.checked&&!Object.values(d.types||{}).some(Boolean)){d.types={...(d.types||{}),[d.t||"cni"]:true}}coche=true}
   if(t.dataset.ptyp){const d=a.docs.piece;d.types=d.types||{};d.types[t.dataset.ptyp]=t.checked;
+    if(t.checked){if(t.dataset.ptyp==="cni"){d.types.passeport=false;d.types.titre=false}else d.types.cni=false}
     const un=Object.keys(PIECE_T).find(x=>d.types[x]);if(un)d.t=un;
     // Pièce valable : CNI seule, OU passeport + titre de séjour ensemble
     const ok=d.types.cni||(d.types.passeport&&d.types.titre);
