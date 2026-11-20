@@ -1,6 +1,6 @@
 {
   "builds": [
-    { "src": "app.py", "use": "@vercel/python", "config": { "includeFiles": ["*.docx"] } }
+    { "src": "app.py", "use": "@vercel/python", "config": { "includeFiles": ["*.docx", "modeles_word.py"] } }
   ],
   "routes": [
     { "src": "/(.*)", "dest": "app.py" }
