@@ -289,7 +289,7 @@ def index():
     return render_template("index.html", user_email=session.get("user_email", ""))
 
 
-# Modèles Word des entretiens (dossier modeles/) — accès réservé aux comptes connectés
+# Modèles Word des entretiens (fichiers .docx à la racine du dépôt) — accès réservé aux comptes connectés
 MODELES = {
     "01_Suivi_1_mois.docx",
     "02_Suivi_3_mois.docx",
@@ -303,7 +303,7 @@ MODELES = {
 def modele(nom):
     if nom not in MODELES:
         abort(404)
-    return send_from_directory(os.path.join(app.root_path, "modeles"), nom, as_attachment=True)
+    return send_from_directory(app.root_path, nom, as_attachment=True)
 
 
 @app.route("/favicon.ico")
