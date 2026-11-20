@@ -114,6 +114,7 @@ a.ghost{text-decoration:none}
 .editor input{border:1px solid var(--line);border-radius:10px;padding:7px 10px;background:var(--card)}
 .btn{border:none;border-radius:10px;padding:8px 14px;font-weight:700;background:var(--navy);color:#fff}
 .btn.teal{background:var(--teal);color:#06302F}
+a.btn{text-decoration:none;display:inline-block}
 .btn.light{background:var(--card);color:var(--ink2);border:1px solid var(--line)}
 .note{font-size:12.5px;color:var(--ink2);margin:10px 0 0}
 
@@ -371,7 +372,7 @@ const STATUS_LAB={manquant:"Manquant",recu:"Reçu",verifie:"Vérifié",nc:"Non c
 const labelOf=k=>([...DOCS_OBL,...DOCS_SIGN].find(x=>x[0]===k)||[,k])[1];
 
 let S={arrivees:[],poste:[],feed:[]},LOADED=false,ERR="";
-let UI={acc:{admin:false,vie:false},tab:"poste",agence:"Toutes",open:null,editor:null,onlyTodo:true,adding:false,addErr:""};
+let UI={acc:{admin:false,vie:false,ent:false},tab:"poste",agence:"Toutes",open:null,editor:null,onlyTodo:true,adding:false,addErr:""};
 
 function norm(p){
   p.docs=p.docs||{};[...DOCS_OBL,...DOCS_SIGN].forEach(([k])=>{if(!p.docs[k])p.docs[k]={s:"manquant",c:""}});
@@ -382,6 +383,7 @@ function norm(p){
   p.ech=p.ech||{};ECH.forEach(([k])=>{p.ech[k]=p.ech[k]||{date:"",rdv:""}});
   p.vie=p.vie||{};p.vie.avenants=Array.isArray(p.vie.avenants)?p.vie.avenants:[];
   VIE.forEach(([k])=>{p.vie[k]=p.vie[k]||{fait:false,c:""}});
+  p.vie.ent=p.vie.ent||{};ENT.forEach(d=>{p.vie.ent[d.k]=Object.assign({le:"",rdv:"",c:"",nc:false},p.vie.ent[d.k])});
   p.id=String(p.id);return p;
 }
 
@@ -624,6 +626,63 @@ function vieSection(a){
      ${VIE.map(([k,ico,t,ek])=>carteEch(a,k,ico,t,ek)).join("")}
    </div></div>`;
 }
+// ---- « Entretiens » : suivi 1/3/6 mois, annuel, parcours professionnel ----
+const ENT=[
+ {k:"m1",ico:"🌱",t:"Suivi 1 mois",mois:1,f:"01_Suivi_1_mois.docx"},
+ {k:"m3",ico:"🌿",t:"Suivi 3 mois",mois:3,f:"02_Suivi_3_mois.docx"},
+ {k:"m6",ico:"🌳",t:"Suivi 6 mois",mois:6,f:"03_Suivi_6_mois.docx"},
+ {k:"annuel",ico:"📅",t:"Entretien annuel",every:12,f:"04_Entretien_annuel.docx"},
+ {k:"parcours",ico:"🧭",t:"Parcours professionnel",every:48,f:"05_Entretien_parcours_professionnel.docx"}
+];
+// Ajoute n mois à une date AAAA-MM-JJ (31 août + 6 mois = 28 février, pas 3 mars)
+function addMois(s,n){const [y,m,d]=s.split("-").map(Number);const t=y*12+(m-1)+n,Y=Math.floor(t/12),M=t%12;
+  const last=new Date(Y,M+1,0).getDate();return Y+"-"+String(M+1).padStart(2,"0")+"-"+String(Math.min(d,last)).padStart(2,"0")}
+// Échéance : suivis = embauche + 1/3/6 mois ; annuel = dernier entretien + 1 an (sinon 1er anniversaire
+// d'embauche) ; parcours = dernier entretien + 4 ans (sinon 1er anniversaire, avec l'entretien annuel).
+function entDue(a,d){const e=a.vie.ent[d.k];
+  if(d.mois)return a.embauche?addMois(a.embauche,d.mois):"";
+  if(e.le)return addMois(e.le,d.every);
+  return a.embauche?addMois(a.embauche,12):"";
+}
+function entStatus(a,d){const e=a.vie.ent[d.k],due=entDue(a,d);
+  if(e.nc)return{k:"nc",t:"Non concerné",n:"—",u:"non concerné",due};
+  if(e.rdv){const j=days(e.rdv);
+    return j>=0?{k:"rdv",t:"RDV le "+fmt(e.rdv),n:"J-"+j,u:"avant le RDV du "+fmt(e.rdv),due}
+               :{k:"bad",t:"RDV passé – à mettre à jour",n:"+"+(-j)+" j",u:"saisir la date de l’entretien",due}}
+  if(d.mois&&e.le)return{k:"ok",t:"Fait le "+fmt(e.le),n:"✓",u:"entretien réalisé",due};
+  if(!due)return{k:"vide",t:"Date d’embauche manquante",n:"?",u:"renseigner la date d’embauche",due};
+  const j=days(due);
+  if(j>=0)return{k:j<=30?"warn":"ok",t:(j<=30?"Dans ":"À venir, dans ")+j+" j",n:"J-"+j,u:"échéance le "+fmt(due),due};
+  // Très en retard sans aucune date saisie : probablement déjà fait avant l'appli -> à renseigner
+  if(!e.le&&j<-60)return{k:"vide",t:"À renseigner",n:"?",u:"échéance du "+fmt(due)+" : déjà fait ? saisir la date",due};
+  return{k:"bad",t:"En retard de "+(-j)+" j",n:"+"+(-j),u:"échéance le "+fmt(due),due};
+}
+function carteEnt(a,d){
+  const e=a.vie.ent[d.k],s=entStatus(a,d),rec=!!d.every;
+  const note=d.k==="parcours"&&!e.le?`<p class="note" style="margin:0">1re fois : en même temps que l’entretien annuel de 1 an, puis tous les 4 ans.</p>`
+           :d.k==="annuel"?`<p class="note" style="margin:0">Tous les ans.</p>`:"";
+  return `<article class="vcard st-${s.k} vc-ent" id="ent-${d.k}">
+    <header><span class="v-ico" aria-hidden="true">${d.ico}</span><h4>${d.t}</h4><span class="v-st">${s.t}</span></header>
+    <div class="v-body">
+      <div class="count st-${s.k}"><b>${s.n}</b><small>${s.u}</small></div>
+      <div class="v-fields">
+        <label>${rec?"Dernier entretien le":"Entretien réalisé le"}<input type="date" min="2015-01-01" max="2040-12-31" data-ent="${d.k}|le" value="${e.le||""}" ${e.nc?"disabled":""}></label>
+        <label>RDV prévu le<span class="rdvrow"><input type="date" min="2026-01-01" max="2040-12-31" data-ent="${d.k}|rdv" value="${e.rdv||""}" ${e.nc?"disabled":""}>${e.rdv?`<button class="x" data-entunrdv="${d.k}" title="Retirer le RDV" aria-label="Retirer le RDV">×</button>`:""}</span></label>
+        ${rec&&s.due&&s.k!=="nc"?`<small style="color:var(--ink2)">Prochain entretien : ${fmt(s.due)}</small>`:""}
+      </div>
+    </div>
+    ${note}
+    <div class="v-row"><a class="btn light" href="/modeles/${d.f}" download>📄 Modèle Word</a>
+      <button class="nc" data-entnc="${d.k}" aria-pressed="${!!e.nc}">N/C</button></div>
+    <textarea class="v-com" data-entc="${d.k}" rows="2" placeholder="Commentaire…" aria-label="Commentaire ${d.t}">${esc(e.c)}</textarea>
+  </article>`;
+}
+function entScore(a){let ok=0;ENT.forEach(d=>{const k=entStatus(a,d).k;if(k==="ok"||k==="nc"||k==="warn"||k==="rdv")ok++});return{ok,t:ENT.length}}
+function entSection(a){
+  const sc=entScore(a);
+  return `${accHead("ent","💬","Entretiens","Suivi 1, 3 et 6 mois, entretien annuel, parcours professionnel",`${sc.ok} / ${sc.t}`,sc.ok===sc.t?"ok":"bad")}
+   <div class="acc-body" ${UI.acc.ent?"":"hidden"}><div class="vie-grid">${ENT.map(d=>carteEnt(a,d)).join("")}</div></div>`;
+}
 function fiche(a){
   const p=progress(a);
   const nCl=CLASSEUR.filter(([k])=>a.classeur[k]).length;
@@ -652,6 +711,7 @@ function fiche(a){
      <p class="note">Les cases sont enregistrées dès qu’on les coche. « Vérifié » coche aussi « Présent ».</p>
    </div></div>
    ${vieSection(a)}
+   ${entSection(a)}
    <div class="sec" style="text-align:right"><button class="ghost" data-archiver="${a.id}">🗄 Archiver (a quitté AID’Aux)</button> <button class="ghost" data-retirer="${a.id}">Supprimer</button></div>
   </div>`;
 }
@@ -815,6 +875,8 @@ document.addEventListener("click",async ev=>{
     const el=document.getElementById("vie-"+k);if(el){el.scrollIntoView({behavior:"smooth",block:"center"});el.classList.add("flash");setTimeout(()=>el.classList.remove("flash"),1200)}return}
   if(a&&t.dataset.avadd!==undefined){a.vie.avenants.unshift({date:"",c:"",signe:false});render();push(a);return}
   if(a&&t.dataset.avdel!==undefined){const i=+t.dataset.avdel;if(!confirm("Supprimer cet avenant ?"))return;a.vie.avenants.splice(i,1);render();push(a);return}
+  if(a&&t.dataset.entnc){const e=a.vie.ent[t.dataset.entnc];e.nc=!e.nc;render();push(a);return}
+  if(a&&t.dataset.entunrdv){a.vie.ent[t.dataset.entunrdv].rdv="";render();push(a);return}
   if(a&&t.dataset.vnc){const e=a.ech[t.dataset.vnc];e.nc=!e.nc;render();push(a);return}
   if(a&&t.dataset.vunrdv){a.ech[t.dataset.vunrdv].rdv="";render();push(a);return}
   if(t.dataset.ed){const [id,k]=t.dataset.ed.split("|");UI.editor=(UI.editor&&UI.editor.id===id&&UI.editor.k===k)?null:{id,k};return render()}
@@ -847,6 +909,12 @@ document.addEventListener("change",ev=>{
   // CMU : simple information, ne compte pas dans le dossier complet
   if(t.hasAttribute("data-cmu")){a.docs.cpam.cmu=t.checked;render();push(a);return}
   if(t.dataset.viec){a.vie[t.dataset.viec].c=t.value;push(a);return}
+  if(t.dataset.entc){a.vie.ent[t.dataset.entc].c=t.value;push(a);return}
+  if(t.dataset.ent){const [k,f]=t.dataset.ent.split("|"),e=a.vie.ent[k],d=ENT.find(x=>x.k===k);e[f]=t.value;let news=null;
+    if(t.value){e.nc=false;
+      if(f==="le"){e.rdv="";news={txt:d.t+" fait pour "+a.nom};toast("Bravo 🎉 "+d.t+" noté"+(d.every?" — prochain : "+fmt(entDue(a,d)):""))}
+      if(f==="rdv")news={txt:"RDV "+d.t.toLowerCase()+" pour "+a.nom+" le "+fmt(t.value),c:"coral"}}
+    render();push(a,news);return}
   if(t.dataset.vief){const k=t.dataset.vief,v=a.vie[k];v.fait=t.checked;v.le=t.checked?new Date().toISOString().slice(0,10):"";
     let news=null;
     if(t.checked&&(k==="medecine"||k==="entretien")){a.ech[k].rdv="";const l=VIE.find(x=>x[0]===k)[2];news={txt:l+" faite pour "+a.nom};toast("Bravo 🎉 Pensez à noter la prochaine échéance");}
