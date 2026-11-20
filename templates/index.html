@@ -1,188 +1,890 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AID'AUX — Portail des applications</title>
-<link rel="icon" type="image/x-icon" href="favicon.ico?v=3">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
-<link rel="icon" type="image/x-icon" href="favicon.ico">
-<link rel="apple-touch-icon" sizes="180x180" href="favicon-180.png">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Aid’Aux Dossiers</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/favicon.ico">
+<meta name="theme-color" content="#1B2A6B">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --teal: #00BBB4;
-    --teal-dark: #000F9F;
-    --orange: #FF4713;
-    --bg: #f4f7f7;
-    --card: #ffffff;
-    --text: #223;
-    --muted: #6b7a7a;
-    --border: #dfe7e6;
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    font-family: "Segoe UI", Arial, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-  .topbar {
-    width: 100%;
-    background: #ffffff;
-    padding: 18px 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-bottom: 3px solid var(--orange);
-    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-  }
-  .topbar img { height: 56px; display: block; }
-  .hero {
-    text-align: center;
-    margin: 40px 20px 8px;
-  }
-  .hero h1 {
-    color: var(--teal-dark);
-    font-size: 1.7rem;
-    margin: 0 0 8px;
-  }
-  .hero p {
-    color: var(--muted);
-    font-size: 1rem;
-    margin: 0;
-  }
-  .cards {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 24px;
-    justify-content: center;
-    max-width: 928px;   /* 3 cartes (840) + 2 gaps (48) + padding latéral (40) */
-    margin: 36px auto 60px;
-    padding: 0 20px;
-  }
-  .card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 32px 28px;
-    width: 280px;
-    text-align: center;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-  .card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-  }
-  .card-icon {
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.6rem;
-    margin-bottom: 16px;
-    color: #fff;
-  }
-  .icon-suivi { background: var(--teal); }
-  .icon-recrutement { background: var(--teal-dark); }
-  .icon-prospects { background: var(--orange); }
-  .icon-km { background: #2E8B57; }
-  .icon-prepaie { background: #6A1B9A; }
-  .icon-dossiers { background: #37474F; }
-  .card h2 {
-    font-size: 1.15rem;
-    color: var(--teal-dark);
-    margin: 0 0 8px;
-  }
-  .card p {
-    color: var(--muted);
-    font-size: 0.88rem;
-    margin: 0 0 22px;
-    line-height: 1.4;
-    min-height: 40px;
-  }
-  .card a {
-    display: inline-block;
-    background: var(--orange);
-    color: #fff;
-    text-decoration: none;
-    padding: 10px 22px;
-    border-radius: 6px;
-    font-size: 0.95rem;
-    font-weight: 600;
-  }
-  .card a:hover { background: #d93a0f; }
-  footer {
-    color: var(--muted);
-    font-size: 0.8rem;
-    margin-bottom: 24px;
-  }
+:root{
+  --navy:#1B2A6B;--teal:#13B3B3;--coral:#E8583A;
+  --bg:#F3F6FB;--card:#FFFFFF;--ink:#1B2A6B;--ink2:#56607F;--line:#DDE3EF;
+  --ok:#22855A;--ok-soft:#E2F4EA;--warn:#B8650F;--warn-soft:#FDEFDC;
+  --bad:#C93434;--bad-soft:#FDE6E6;--rdv:#6A4BC9;--rdv-soft:#EEE8FB;
+  --teal-ink:#0B7A7A;--teal-soft:#DFF5F5;--gray-soft:#EEF1F6;--coral-soft:#FDE9E3;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0F1630;--card:#18214A;--ink:#EEF1FB;--ink2:#A7B0D0;--line:#2A3566;
+  --ok:#5FD39A;--ok-soft:#173A31;--warn:#F2B15F;--warn-soft:#3D2E17;
+  --bad:#F28585;--bad-soft:#40202A;--rdv:#B9A5F5;--rdv-soft:#2C2556;
+  --teal-ink:#5FE0E0;--teal-soft:#123A45;--gray-soft:#222C5A;--coral-soft:#3E2526;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F1630;--card:#18214A;--ink:#EEF1FB;--ink2:#A7B0D0;--line:#2A3566;
+  --ok:#5FD39A;--ok-soft:#173A31;--warn:#F2B15F;--warn-soft:#3D2E17;
+  --bad:#F28585;--bad-soft:#40202A;--rdv:#B9A5F5;--rdv-soft:#2C2556;
+  --teal-ink:#5FE0E0;--teal-soft:#123A45;--gray-soft:#222C5A;--coral-soft:#3E2526;color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Nunito,"Segoe UI",system-ui,sans-serif;font-size:15px;line-height:1.5}
+h1,h2,h3{font-family:"Baloo 2","Trebuchet MS",sans-serif;font-weight:700;margin:0;line-height:1.15}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
+.appbar{background:linear-gradient(120deg,#1B2A6B 0%,#000F9F 100%);color:#fff;padding:18px 0 4px}
+.appbar .inner,.wrap{max-width:1440px;margin:0 auto;padding-left:28px;padding-right:28px}
+.wrap{padding-top:20px;padding-bottom:60px}
+.top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+.logo{width:46px;height:46px;border-radius:14px;background:#fff;display:grid;place-items:center;color:var(--navy);font-family:"Baloo 2",sans-serif;font-weight:700;font-size:20px}
+.logo span{color:var(--teal)}
+.top h1{font-size:26px;color:#fff}
+.top p{margin:0;color:#C9D1F2;font-size:14px}
+.who-me{color:#C9D1F2;font-size:13px}
+.appbar .ghost{color:#fff;border-color:rgba(255,255,255,.35)}
+.appbar .ghost:hover{border-color:#fff}
+.logoimg{background:#fff;border-radius:12px;padding:3px}
+.top .grow{flex:1}
+.logoimg{height:46px;width:auto}
+a.ghost{text-decoration:none}
+.dates select{border:1px solid var(--line);border-radius:10px;padding:7px 10px;background:var(--bg)}
+.btn:disabled{opacity:.6}
+.ghost{background:none;border:1px solid var(--line);border-radius:10px;padding:7px 12px;color:var(--ink2);font-size:13px}
+.ghost:hover{border-color:var(--ink2)}
+
+.hero{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:14px}
+.gauge{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);border-radius:20px;padding:16px;display:flex;align-items:center;gap:14px;color:#fff}
+.gauge svg{flex:none}
+.gauge h3{font-size:18px}
+.gauge p{margin:2px 0 0;color:#C9D1F2;font-size:13px}
+.gauge.total{background:rgba(19,179,179,.18);border-color:rgba(19,179,179,.5);color:#fff}
+.gauge.total p{color:#C9D1F2}
+.bignum{font-family:"Baloo 2",sans-serif;font-weight:700;font-size:40px;min-width:72px;text-align:center;line-height:1}
+
+.feed{display:flex;gap:10px;overflow-x:auto;padding-bottom:14px;scrollbar-width:thin}
+.news{flex:none;max-width:300px;background:rgba(255,255,255,.08);color:#fff;border:none;border-left:4px solid var(--teal);border-radius:0;padding:9px 12px;font-size:13px}
+.news.coral{border-left-color:var(--coral)}
+.news small{display:block;color:#C9D1F2;font-size:12px}
+
+.bar-tabs{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.tab{border:none;background:var(--card);border-radius:999px;padding:9px 16px;font-weight:700;color:var(--ink2);border:1px solid var(--line)}
+.tab[aria-pressed="true"]{background:var(--navy);color:#fff;border-color:var(--navy)}
+.tab .n{display:inline-block;min-width:22px;padding:0 6px;border-radius:99px;background:var(--coral);color:#fff;font-size:12px;margin-left:6px}
+.spacer{flex:1}
+.chip{border:1px solid var(--line);background:none;border-radius:999px;padding:6px 12px;font-size:13px;color:var(--ink2)}
+.chip[aria-pressed="true"]{background:var(--teal-soft);color:var(--teal-ink);border-color:var(--teal)}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.pcard{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;text-align:left;width:100%;transition:transform .15s,border-color .15s}
+.pcard:hover{transform:translateY(-2px);border-color:var(--teal)}
+.who{display:flex;align-items:center;gap:12px}
+.av{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:14px;flex:none;background:var(--teal-soft);color:var(--teal-ink)}
+.av.v{background:var(--coral-soft);color:var(--coral)}
+.who b{display:block;font-size:16px}
+.who span{color:var(--ink2);font-size:13px}
+.prog{height:10px;border-radius:99px;background:var(--gray-soft);overflow:hidden;display:flex;margin:14px 0 6px}
+.prog i{display:block;height:100%;transition:width .4s}
+.prog .pv{background:var(--ok)}.prog .pr{background:var(--teal)}
+.progtxt{display:flex;justify-content:space-between;font-size:13px;color:var(--ink2)}
+.progtxt b{color:var(--ink)}
+
+.empty{background:var(--card);border:2px dashed var(--line);border-radius:18px;padding:28px;text-align:center;color:var(--ink2)}
+.empty h3{color:var(--ink);font-size:20px;margin-bottom:4px}
+
+.rows{display:flex;flex-direction:column;gap:10px}
+.row{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 14px}
+.row-main{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.row-main .who{min-width:220px;flex:1}
+.pills{display:flex;gap:8px;flex-wrap:wrap}
+.pill{border:none;border-radius:12px;padding:6px 10px;font-size:12.5px;text-align:left;line-height:1.25;min-width:118px}
+.pill small{display:block;font-size:11.5px;opacity:.85}
+.st-ok{background:var(--ok-soft);color:var(--ok)}
+.st-warn{background:var(--warn-soft);color:var(--warn)}
+.st-bad{background:var(--bad-soft);color:var(--bad)}
+.st-rdv{background:var(--rdv-soft);color:var(--rdv)}
+.st-vide{background:var(--gray-soft);color:var(--ink2)}
+.pill.open{outline:2px solid currentColor}
+.editor{margin-top:12px;padding:12px;border-radius:12px;background:var(--bg);display:flex;flex-wrap:wrap;gap:12px 20px;align-items:flex-end}
+.editor label{display:flex;flex-direction:column;font-size:12.5px;color:var(--ink2);gap:4px}
+.editor input{border:1px solid var(--line);border-radius:10px;padding:7px 10px;background:var(--card)}
+.btn{border:none;border-radius:10px;padding:8px 14px;font-weight:700;background:var(--navy);color:#fff}
+.btn.teal{background:var(--teal);color:#06302F}
+.btn.light{background:var(--card);color:var(--ink2);border:1px solid var(--line)}
+.note{font-size:12.5px;color:var(--ink2);margin:10px 0 0}
+
+.detail{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px}
+.dhead{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+.dhead h2{font-size:24px}
+.sec{margin-top:22px}
+.sec h3{font-size:18px;color:var(--coral);margin-bottom:8px}
+.legend{display:flex;gap:8px;flex-wrap:wrap;font-size:12.5px;color:var(--ink2);margin:8px 0 0}
+.doc{display:grid;grid-template-columns:minmax(150px,1.2fr) auto minmax(140px,1.4fr);gap:8px 12px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.doc .lab{font-weight:600}
+.doc .lab select{margin-top:4px;border:1px solid var(--line);border-radius:8px;padding:3px 6px;background:var(--card);font-size:13px;font-weight:400}
+.sbtns{display:flex;gap:6px}
+.sbtn{border:none;border-radius:10px;padding:6px 10px;font-size:13px;font-weight:700;min-width:96px}
+.nc{border:1px solid var(--line);background:none;border-radius:10px;padding:5px 8px;font-size:12px;color:var(--ink2)}
+.nc[aria-pressed="true"]{background:var(--gray-soft);color:var(--ink);text-decoration:line-through}
+.st-manquant{background:var(--gray-soft);color:var(--ink2)}
+.st-recu{background:var(--teal-soft);color:var(--teal-ink)}
+.st-verifie{background:var(--ok-soft);color:var(--ok)}
+.st-nc{background:var(--gray-soft);color:var(--ink2);text-decoration:line-through}
+.doc input.com{border:1px solid var(--line);border-radius:8px;padding:6px 9px;background:var(--bg);font-size:13px;width:100%}
+.sub{display:flex;flex-wrap:wrap;gap:8px;padding:10px 0 4px}
+.tick{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:6px 11px;font-size:13px;background:none}
+.tick[aria-pressed="true"]{background:var(--ok-soft);color:var(--ok);border-color:var(--ok)}
+.dates{display:flex;flex-wrap:wrap;gap:14px}
+.dates label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--ink2)}
+.dates input{border:1px solid var(--line);border-radius:10px;padding:7px 10px;background:var(--bg)}
+
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(120px);background:var(--navy);color:#fff;padding:12px 20px;border-radius:14px;font-weight:700;transition:transform .35s;z-index:20;max-width:90vw;text-align:center}
+.toast.show{transform:translateX(-50%) translateY(0)}
+#confetti{position:fixed;inset:0;pointer-events:none;z-index:15}
+
+@media (max-width:720px){
+  .hero{grid-template-columns:1fr}
+  .doc{grid-template-columns:1fr}
+}
+
+/* ---- deux colonnes ---- */
+.split{display:grid;grid-template-columns:minmax(260px,340px) minmax(0,1fr);gap:16px;align-items:start}
+.col-list{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:10px;position:sticky;top:12px;max-height:calc(100vh - 24px);display:flex;flex-direction:column}
+.li-search{padding:4px 4px 8px}
+.li-search input{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font:inherit;background:var(--card);color:var(--ink)}
+.li-head{display:flex;gap:6px;flex-wrap:wrap;padding:4px 4px 10px;border-bottom:1px solid var(--line);margin-bottom:6px}
+.li-wrap{overflow-y:auto;display:flex;flex-direction:column;gap:4px}
+.li{display:flex;gap:10px;align-items:center;text-align:left;width:100%;border:1px solid transparent;background:none;border-radius:12px;padding:8px}
+.li:hover{background:var(--bg)}
+.li-row{display:flex;align-items:center;gap:2px}
+.li-x{flex:none;width:28px;height:28px;border:none;background:none;border-radius:8px;color:var(--ink2);font-size:20px;line-height:1;cursor:pointer}
+.li-x:hover{background:#fde2e2;color:#c62828}
+.li-x.li-arch{font-size:15px}
+.li-x.li-arch:hover{background:var(--bg);color:var(--ink)}
+.tab .n.n-gris{background:var(--line);color:var(--ink2)}
+.li.active{background:var(--teal-soft);border-color:var(--teal)}
+.li .av{width:36px;height:36px;font-size:12.5px}
+.li-t{flex:1;min-width:0}
+.li-t b{display:block;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.li-t>span{color:var(--ink2);font-size:12px}
+.li-m{display:flex;align-items:center;gap:8px;margin-top:3px}
+.li-m small{color:var(--ink2);font-size:11.5px}
+.dots{display:flex;gap:3px}
+.dot{width:9px;height:9px;border-radius:50%;display:block}
+.dot.st-ok{background:var(--ok)}.dot.st-warn{background:var(--warn)}.dot.st-bad{background:var(--bad)}.dot.st-rdv{background:var(--rdv)}.dot.st-vide{background:var(--line)}.dot.st-nc{background:var(--gray-soft);border:1px solid var(--line)}
+.mini{flex:1;height:5px;border-radius:9px;background:var(--gray-soft);overflow:hidden;max-width:90px}
+.mini i{display:block;height:100%;background:var(--ok)}
+.empty.small{padding:18px;font-size:13.5px;border-width:1px}
+.back-m{display:none}
+.dossier h4{font-size:14px;margin:18px 0 6px;color:var(--ink);font-family:Nunito,sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.02em}
+.dossier h4 small{text-transform:none;font-weight:400;color:var(--ink2);letter-spacing:0}
+.table{border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.trow{display:grid;grid-template-columns:minmax(150px,1.1fr) minmax(70px,auto) minmax(140px,1.6fr) 62px 52px;gap:10px;align-items:center;padding:7px 10px;border-top:1px solid var(--line)}
+.trow:first-child{border-top:none}
+.trow.thead{background:var(--bg);font-size:11.5px;font-weight:700;text-transform:uppercase;color:var(--ink2);padding:6px 10px}
+.trow.thead .t-ver{color:var(--coral)}
+.trow.is-ok{background:color-mix(in srgb,var(--ok-soft) 55%,transparent)}
+.trow.is-nc .t-doc{text-decoration:line-through;color:var(--ink2)}
+.t-doc{font-weight:600;font-size:14px}
+.t-doc small{font-weight:400;color:var(--ink2)}
+.t-pres,.t-ver{display:flex;justify-content:center}
+.t-wide{grid-column:2 / -1}
+.trow .com{border:1px solid var(--line);border-radius:8px;padding:6px 9px;background:var(--bg);font-size:13px;width:100%}
+.cmu{margin-top:4px;font-size:13px;font-weight:600}
+.ptypes{display:flex;flex-direction:column;gap:3px;align-items:flex-start}
+.cl-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:4px 12px}
+.cbx{display:inline-flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;user-select:none}
+.cbx input{position:absolute;opacity:0;width:1px;height:1px}
+.cbx .box{width:22px;height:22px;border-radius:6px;border:2px solid var(--ink2);background:var(--card);display:grid;place-items:center;flex:none;transition:background .15s,border-color .15s}
+.cbx input:checked+.box{background:var(--ok);border-color:var(--ok)}
+.cbx input:checked+.box::after{content:"";width:6px;height:11px;border:solid #fff;border-width:0 3px 3px 0;transform:rotate(45deg) translate(-1px,-1px)}
+.cbx input:focus-visible+.box{outline:3px solid var(--teal);outline-offset:2px}
+.cbx input:disabled+.box{opacity:.35}
+.t-ver .cbx input:checked+.box{background:var(--coral);border-color:var(--coral)}
+@media (max-width:900px){
+  .split{grid-template-columns:1fr}
+  .col-list{position:static;max-height:none}
+  .split.has-open .col-list{display:none}
+  .back-m{display:inline-block}
+  .trow{grid-template-columns:1fr auto auto;grid-template-areas:"doc pres ver" "com com nc"}
+  .t-doc{grid-area:doc}.t-pres{grid-area:pres}.t-ver{grid-area:ver}.t-com{grid-area:com}.t-nc{grid-area:nc}
+  .trow.thead{display:none}
+  .t-wide{grid-column:1 / -1}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+
+/* ---- lignes dépliables ---- */
+.acc-h{display:flex;align-items:center;gap:14px;width:100%;text-align:left;margin-top:16px;padding:14px 16px;border:1px solid var(--line);border-radius:16px;background:var(--card);cursor:pointer;transition:box-shadow .2s,transform .1s}
+.acc-h:hover{box-shadow:0 4px 16px rgba(27,42,107,.08)}
+.acc-h:active{transform:scale(.995)}
+.acc-h.open{border-bottom-left-radius:4px;border-bottom-right-radius:4px}
+.acc-ico{font-size:26px;width:44px;height:44px;border-radius:12px;background:var(--gray-soft);display:grid;place-items:center;flex:none}
+.acc-t{flex:1;min-width:0}.acc-t b{display:block;font-size:16.5px;font-family:'Baloo 2',sans-serif}.acc-t small{color:var(--ink2);font-size:12.5px}
+.acc-badge{font-family:'Baloo 2',sans-serif;font-weight:700;font-size:15px;padding:4px 12px;border-radius:99px}
+.acc-badge.st-ok{background:var(--ok-soft);color:var(--ok)}.acc-badge.st-bad{background:var(--bad-soft);color:var(--bad)}
+.acc-chev{font-size:24px;color:var(--ink2);transition:transform .25s;line-height:1}
+.acc-h.open .acc-chev{transform:rotate(90deg)}
+.acc-body{border:1px solid var(--line);border-top:none;border-radius:0 0 16px 16px;padding:4px 14px 14px;animation:accIn .25s ease}
+.acc-body .sec.dossier{margin-top:8px}
+@keyframes accIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+/* ---- la vie du salarié ---- */
+.vie-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-top:12px}
+.vcard{border:1px solid var(--line);border-left:6px solid var(--line);border-radius:14px;padding:12px 14px;background:var(--card);display:flex;flex-direction:column;gap:10px;transition:box-shadow .3s}
+.vcard.wide{grid-column:1/-1}
+.vcard.st-ok,.vcard.st-nc{border-left-color:var(--ok)}
+.vcard.st-bad,.vcard.st-vide,.vcard.st-rdv,.vcard.st-warn{border-left-color:var(--bad)}
+.vcard.vc-medecine.st-warn{border-left-color:#1F5FBF}
+.vcard.flash{box-shadow:0 0 0 4px color-mix(in srgb,var(--ink2) 35%,transparent)}
+.vcard header{display:flex;align-items:center;gap:8px}
+.vcard h4{margin:0;font-size:15px;flex:1}
+.v-ico{font-size:20px}
+.v-st{font-size:12px;font-weight:700;padding:3px 9px;border-radius:99px}
+.vcard.st-ok .v-st,.vcard.st-nc .v-st{background:var(--ok-soft);color:var(--ok)}
+.vcard.st-bad .v-st,.vcard.st-vide .v-st,.vcard.st-rdv .v-st,.vcard.st-warn .v-st{background:var(--bad-soft);color:var(--bad)}
+.vcard.vc-medecine.st-warn .v-st{background:#E3EEFB;color:#1F5FBF}
+.v-body{display:flex;gap:14px;align-items:center}
+.count{min-width:96px;text-align:center;padding:8px 6px;border-radius:12px}
+.count b{display:block;font-family:'Baloo 2',sans-serif;font-size:30px;line-height:1}
+.count small{font-size:11px}
+.count.st-ok,.count.st-nc{background:var(--ok-soft);color:var(--ok)}
+.count.st-bad,.count.st-vide,.count.st-rdv,.count.st-warn{background:var(--bad-soft);color:var(--bad)}
+.vc-medecine .count.st-warn{background:#E3EEFB;color:#1F5FBF}
+.v-fields{display:flex;flex-direction:column;gap:6px;flex:1}
+.v-fields label{display:flex;flex-direction:column;font-size:12px;color:var(--ink2);gap:2px}
+.v-fields input{border:1px solid var(--line);border-radius:8px;padding:6px 8px;background:var(--bg);font:inherit;color:var(--ink)}
+.rdvrow{display:flex;gap:4px}.rdvrow input{flex:1}
+.v-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.v-com{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--bg);font:inherit;font-size:13px;resize:vertical;color:var(--ink)}
+.x{border:1px solid var(--line);background:var(--card);border-radius:8px;width:30px;height:30px;font-size:18px;line-height:1;color:var(--ink2);cursor:pointer;flex:none}
+.x:hover{color:var(--bad);border-color:var(--bad)}
+.av-list{display:flex;flex-direction:column;gap:6px}
+.av-l{display:grid;grid-template-columns:150px 1fr auto auto;gap:8px;align-items:center;padding:6px;border-radius:10px;background:var(--bad-soft)}
+.av-l.is-ok{background:var(--ok-soft)}
+.av-l input[type=date]{border:1px solid var(--line);border-radius:8px;padding:6px 8px;background:var(--card);font:inherit;color:var(--ink)}
+.av-l .com{border:1px solid var(--line);border-radius:8px;padding:6px 9px;background:var(--card);font-size:13px;width:100%}
+.v-empty{color:var(--ink2);font-size:13px;margin:0}
+.av-add{align-self:flex-start}
+@media (max-width:600px){.av-l{grid-template-columns:1fr auto}.av-l .com{grid-column:1/-1}.v-body{flex-direction:column;align-items:stretch}}
+@media (prefers-color-scheme:dark){.vcard.vc-medecine.st-warn .v-st,.vc-medecine .count.st-warn{background:#16294A;color:#8DB8F5}}
+@media (prefers-reduced-motion:reduce){.acc-body{animation:none}.acc-chev{transition:none}}
+/* ==== Couleurs : uniquement VERT = fait, ROUGE = pas fait ==== */
+.pill.st-ok,.pill.st-nc{background:var(--ok-soft)!important;color:var(--ok)!important;border-color:transparent!important;text-decoration:none!important}
+.pill.st-warn,.pill.st-bad,.pill.st-rdv,.pill.st-vide{background:var(--bad-soft)!important;color:var(--bad)!important;border-color:transparent!important}
+.pill.st-bad.open,.pill.open{outline:2px solid currentColor}
+.dot.st-ok,.dot.st-nc{background:var(--ok)!important;border:none!important}
+.dot.st-warn,.dot.st-bad,.dot.st-rdv,.dot.st-vide{background:var(--bad)!important}
+.prog,.mini{background:var(--bad-soft)!important}
+.prog .pv,.mini i{background:var(--ok)!important}
+.prog .pr{background:transparent!important}
+.cbx .box{border-color:var(--bad)!important;background:var(--bad-soft)!important}
+.cbx input:checked+.box,.t-ver .cbx input:checked+.box{background:var(--ok)!important;border-color:var(--ok)!important}
+.trow.thead .t-ver,.sec h3{color:var(--ink)!important}
+.av{background:var(--gray-soft)!important;color:var(--ink)!important}
+.li.active{background:var(--gray-soft)!important;border-color:var(--ink2)!important}
+.chip[aria-pressed="true"]{background:var(--gray-soft)!important;color:var(--ink)!important;border-color:var(--ink2)!important}
+.btn.teal{background:var(--navy)!important;color:#fff!important}
+.nc[aria-pressed="true"]{background:var(--ok-soft)!important;color:var(--ok)!important;border-color:transparent!important}
+
+/* Médecine du travail : BLEU quand la date approche */
+.pill.st-warn[data-ed$="|medecine"]{background:#E3EEFB!important;color:#1F5FBF!important}
+.dots .dot:nth-child(4).st-warn{background:#1F5FBF!important}
+@media (prefers-color-scheme:dark){.pill.st-warn[data-ed$="|medecine"]{background:#16294A!important;color:#8DB8F5!important}.dots .dot:nth-child(4).st-warn{background:#8DB8F5!important}}
+
+.vcard{background:var(--card)!important;color:var(--ink)!important;text-decoration:none!important}
+.vcard h4,.vcard .cbx,.vcard label{color:var(--ink)!important;text-decoration:none!important}
+.vcard .v-fields label{color:var(--ink2)!important}
+
+/* date qui approche mais encore valide = à jour (vert), sauf médecine (bleu) */
+.vcard.st-warn{border-left-color:var(--ok)}
+.av-l.is-vide{background:var(--bg)!important}
+/* RDV pris = c'est géré : vert, comme « À jour » */
+.vcard.st-rdv{border-left-color:var(--ok)}
+.vcard.st-rdv .v-st,.count.st-rdv{background:var(--ok-soft);color:var(--ok)}
+.pill.st-rdv{background:var(--ok-soft)!important;color:var(--ok)!important}
+.dot.st-rdv{background:var(--ok)!important;border:none!important}
+.vcard.st-warn .v-st,.count.st-warn,.pill.st-warn,.acc-badge.st-warn{background:var(--ok-soft)!important;color:var(--ok)!important}
+.dot.st-warn{background:var(--ok)!important}
+.vcard.vc-medecine.st-warn{border-left-color:#1F5FBF}
+.vcard.vc-medecine.st-warn .v-st,.vc-medecine .count.st-warn,.pill.st-warn[data-ed$="|medecine"]{background:#E3EEFB!important;color:#1F5FBF!important}
+.dots .dot:nth-child(4).st-warn{background:#1F5FBF!important}
 </style>
 </head>
-<body>
-  <div class="topbar">
-    <img src="logo.png" alt="AID'AUX">
+<body data-user="{{ user_email }}">
+<canvas id="confetti"></canvas>
+<header class="appbar">
+ <div class="inner">
+  <div class="top">
+    <img src="/logo.png" alt="Aid’Aux" class="logoimg" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'logo',innerHTML:'A<span>’</span>'}))">
+    <div class="grow">
+      <h1>Aid’Aux Dossiers</h1>
+      <p id="today"></p>
+    </div>
+    <span class="who-me">{{ user_email }}</span>
+    <button class="btn light" id="impBtn" title="Récupérer les emails des salariés depuis Ximi">📥 Emails Ximi</button><input type="file" id="impFile" accept=".xlsx,.xls,.csv" hidden>
+    <button class="btn teal" id="addBtn">+ Ajouter un salarié</button>
+    <a class="ghost" href="/logout">Se déconnecter</a>
   </div>
+  <section class="hero" id="hero" aria-label="Avancement de l’équipe"></section>
+  <section class="feed" id="feed" aria-label="Fil d’actualité"></section>
+ </div>
+</header>
+<div class="wrap">
+  <nav class="bar-tabs" aria-label="Espaces">
+    <span id="nA" hidden></span>
+    <button class="tab" data-tab="poste">En poste<span class="n" id="nP"></span></button>
+    <button class="tab" data-tab="archives">Archives<span class="n n-gris" id="nR"></span></button>
+    <span class="spacer"></span>
+    <span id="filters"></span>
+  </nav>
 
-  <div class="hero">
-    <h1>Portail des applications AID'AUX</h1>
-    <p>Choisissez l'application dont vous avez besoin</p>
-  </div>
+  <section id="addZone"></section>
+  <main id="view"></main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <div class="cards">
-    <div class="card">
-      <div class="card-icon icon-suivi">📊</div>
-      <h2>Aid'Aux Suivi</h2>
-      <p>Suivi des interventions, anomalies et taux de facturation</p>
-      <a href="https://aidaux-suivi.vercel.app" target="_blank" rel="noopener">Ouvrir</a>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+{% raw %}
+<script>
+const DAY=86400000;
+const TODAY=new Date();TODAY.setHours(0,0,0,0);
+const iso=d=>{const x=new Date(d);return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")+"-"+String(x.getDate()).padStart(2,"0")};
+const fmt=s=>{if(!s)return"";const [y,m,d]=s.split("-");return d+"/"+m+"/"+y};
+const days=s=>Math.round((new Date(s+"T00:00:00")-TODAY)/DAY);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const initials=n=>n.trim().split(/\s+/).map(x=>x[0]).slice(0,2).join("").toUpperCase();
+const first=n=>n.trim().split(/\s+/).slice(-1)[0];
+
+const AGENCES=["Cronenbourg","Vendenheim","Personnel administratif"];
+const DOCS_OBL=[["piece","Pièce d’identité"],["vitale","Carte vitale"],["dpae","DPAE"],["cpam","Attestation CPAM"],["rib","RIB"],["permis","Permis de conduire"],["grise","Carte grise"],["assurance","Attestation assurance voiture"],["domicile","Justificatif de domicile"],["diplomes","Diplômes"],["formations","Attestations de formations"],["employeurs","Attestations employeurs"],["cv","CV / DCC / test"]];
+const DOCS_SIGN=[["contrat","Contrat de travail"],["mutuelle","Mutuelle"]];
+const CLASSEUR=[["duerp","DUERP"],["rqth","RQTH"],["confiance","Personne de confiance"],["digiposte","Consentement Digiposte"],["image","Droit à l’image"],["resto","Carte restaurant"],["reception","Attestation réception et engagement"],["casier","Visibilité du casier n°3"]];
+const DATES=[["envoi","Contrat + mutuelle envoyés le"],["ident","Identifiant Digiposte créé le"],["depot","Documents déposés sur Digiposte le"]];
+const PIECE_T={cni:"CNI",titre:"Titre de séjour",passeport:"Passeport"};
+const ECH=[["piece","Pièce d’identité",90],["cpam","Attestation CPAM",30],["medecine","Médecine du travail",60],["entretien","Entretien individuel",60]];
+const STATUS_NEXT={manquant:"recu",recu:"verifie",verifie:"manquant"};
+const STATUS_LAB={manquant:"Manquant",recu:"Reçu",verifie:"Vérifié",nc:"Non concerné"};
+const labelOf=k=>([...DOCS_OBL,...DOCS_SIGN].find(x=>x[0]===k)||[,k])[1];
+
+let S={arrivees:[],poste:[],feed:[]},LOADED=false,ERR="";
+let UI={acc:{admin:false,vie:false},tab:"poste",agence:"Toutes",open:null,editor:null,onlyTodo:true,adding:false,addErr:""};
+
+function norm(p){
+  p.docs=p.docs||{};[...DOCS_OBL,...DOCS_SIGN].forEach(([k])=>{if(!p.docs[k])p.docs[k]={s:"manquant",c:""}});
+  if(!p.docs.piece.t)p.docs.piece.t="cni";
+  if(!p.docs.piece.types){p.docs.piece.types={};if(p.docs.piece.s==="recu"||p.docs.piece.s==="verifie")p.docs.piece.types[p.docs.piece.t]=true}
+  p.classeur=p.classeur||{};CLASSEUR.forEach(([k])=>{p.classeur[k]=!!p.classeur[k]});
+  p.dates=p.dates||{};DATES.forEach(([k])=>{p.dates[k]=p.dates[k]||""});
+  p.ech=p.ech||{};ECH.forEach(([k])=>{p.ech[k]=p.ech[k]||{date:"",rdv:""}});
+  p.vie=p.vie||{};p.vie.avenants=Array.isArray(p.vie.avenants)?p.vie.avenants:[];
+  VIE.forEach(([k])=>{p.vie[k]=p.vie[k]||{fait:false,c:""}});
+  p.id=String(p.id);return p;
+}
+
+async function api(url,opt={}){
+  const r=await fetch(url,{headers:{"Content-Type":"application/json"},...opt});
+  if(r.redirected&&r.url.includes("/login")){location.href="/login";throw new Error("login")}
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok||j.ok===false)throw new Error(j.erreur||"erreur "+r.status);
+  return j;
+}
+async function load(){
+  try{const j=await api("/api/etat");S.feed=j.feed||[];S.arrivees=[];S.poste=[];S.archives=(j.archives||[]).map(norm);
+    (j.salaries||[]).map(norm).forEach(p=>S.poste.push(p));LOADED=true;ERR=""}
+  catch(e){if(e.message!=="login")ERR=e.message}
+  render();
+}
+let chain=Promise.resolve();
+function push(p,news){
+  const body={docs:p.docs,classeur:p.classeur,dates:p.dates,ech:p.ech,vie:p.vie,phase:p.phase,email:p.email||""};
+  if(news)body.news=news;
+  chain=chain.then(()=>api("/api/salaries/"+p.id,{method:"PUT",body:JSON.stringify(body)}))
+    .then(j=>{if(j&&j.feed){S.feed=j.feed;renderFeed()}})
+    .catch(e=>{if(e.message!=="login")toast("Pas enregistré : "+e.message+". Rechargez la page.")});
+}
+
+function echStatus(e,th){
+  if(e&&e.nc)return{k:"nc",t:"Non concerné",s:""};
+  // RDV passé sans mise à jour = en retard (rouge) ; RDV à venir = géré (vert)
+  if(e&&e.rdv&&days(e.rdv)<0)return{k:"bad",t:"RDV passé – à mettre à jour",s:"RDV du "+fmt(e.rdv)};
+  if(e&&e.rdv)return{k:"rdv",t:"RDV le "+fmt(e.rdv),s:e.date?"valide jusqu’au "+fmt(e.date):""};
+  if(!e||!e.date)return{k:"vide",t:"À renseigner",s:""};
+  const d=days(e.date);
+  if(d<0)return{k:"bad",t:"Expiré",s:"depuis "+(-d)+" j"};
+  if(d<=th)return{k:"warn",t:"Dans "+d+" j",s:"le "+fmt(e.date)};
+  return{k:"ok",t:"À jour",s:"jusqu’au "+fmt(e.date)};
+}
+// À traiter : une échéance proche/expirée/à renseigner OU une case du dossier pas cochée
+// (seule la case CMU, simple information, n'est pas comptée).
+const todo=p=>!progress(p).done||ECH.some(([k,,th])=>["vide","bad","warn"].includes(echStatus(p.ech[k],th).k));
+function progress(a){
+  let v=0,r=0,t=0;
+  [...DOCS_OBL,...DOCS_SIGN].forEach(([k])=>{t++;const s=a.docs[k].s;if(s==="verifie"||s==="nc")v++;else if(s==="recu")r++});
+  CLASSEUR.forEach(([k])=>{t++;if(a.classeur[k])v++});
+  DATES.forEach(([k])=>{t++;if(a.dates[k])v++});
+  return{v,r,t,done:v===t};
+}
+const byAg=l=>UI.agence==="Toutes"?l:l.filter(p=>p.agence===UI.agence);
+
+function ring(pct,col,light){
+  const r=28,c=2*Math.PI*r,off=c*(1-pct/100);
+  return `<svg width="72" height="72" viewBox="0 0 72 72" aria-hidden="true"><circle cx="36" cy="36" r="${r}" fill="none" stroke="${light?"rgba(255,255,255,.18)":"var(--gray-soft)"}" stroke-width="9"/><circle cx="36" cy="36" r="${r}" fill="none" stroke="${col}" stroke-width="9" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${off}" transform="rotate(-90 36 36)" style="transition:stroke-dashoffset .6s"/><text x="36" y="41" text-anchor="middle" font-family="Baloo 2,sans-serif" font-weight="700" font-size="16" fill="${light?"#fff":"var(--ink)"}">${pct}%</text></svg>`;
+}
+function renderHero(){
+  const tot=S.arrivees.length+S.poste.length,ok=S.poste.filter(x=>!todo(x)).length;
+  const pct=tot?Math.round(ok/tot*100):100;
+  const aT=S.poste.filter(todo).length+S.arrivees.length;
+  let rdv=0;S.poste.forEach(p=>ECH.forEach(([k])=>{const e=p.ech[k];if(e.rdv&&days(e.rdv)>=0)rdv++}));
+  document.getElementById("hero").innerHTML=
+   `<div class="gauge total">${ring(pct,"var(--teal)",true)}<div><h3>Toute l’équipe</h3><p>${ok} dossier${ok>1?"s":""} sur ${tot} à jour${pct===100?", bravo":""}</p></div></div>
+    <div class="gauge"><div class="bignum" style="color:#FF8A6B">${aT}</div><div><h3>À traiter</h3><p>Échéances proches, expirées ou à renseigner, et dossiers incomplets</p></div></div>
+    <div class="gauge"><div class="bignum" style="color:#C9B8FF">${rdv}</div><div><h3>RDV à venir</h3><p>Médecine du travail et entretiens déjà planifiés</p></div></div>`;
+}
+function renderFeed(){
+  const el=document.getElementById("feed");
+  el.innerHTML=S.feed.length?S.feed.slice(0,10).map(f=>`<div class="news ${f.c==="coral"?"coral":""}"><small>${days(f.t)===0?"Aujourd’hui":fmt(f.t)}</small>${esc(f.txt)}</div>`).join(""):`<div class="news"><small>Fil d’actualité</small>Les nouvelles de l’équipe s’afficheront ici.</div>`;
+}
+function renderTabs(){
+  document.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-pressed",b.dataset.tab===UI.tab));
+  const nA=S.arrivees.length,nP=S.poste.filter(todo).length;
+  const a=document.getElementById("nA"),p=document.getElementById("nP");
+  a.textContent=nA;a.style.display=nA?"":"none";p.textContent=nP;p.style.display=nP?"":"none";
+  const r=document.getElementById("nR"),nR=(S.archives||[]).length;r.textContent=nR;r.style.display=nR?"":"none";
+  document.getElementById("filters").innerHTML="";
+}
+function renderAdd(){
+  const z=document.getElementById("addZone");
+  if(UI.imp){z.innerHTML=renderImp();return}
+  if(!UI.adding){z.innerHTML="";return}
+  z.innerHTML=`<div class="detail" style="margin-bottom:14px"><h3 style="font-size:20px;margin-bottom:10px">Ajouter un salarié</h3>
+   <div class="dates">
+    <label>Nom et prénom<input id="fNom" placeholder="DUPONT Marie" autocomplete="off"></label>
+    <label>Date d’embauche<input type="date" min="2000-01-01" max="2040-12-31" id="fEmb"></label>
+   </div>
+   <div class="sub" role="radiogroup" aria-label="Où le placer">
+    <button class="tick" data-ph="arrivee" aria-pressed="true">Nouvelle arrivée : dossier d’embauche à compléter</button>
+    <button class="tick" data-ph="poste" aria-pressed="false">Déjà en poste : suivi des renouvellements</button>
+   </div>
+   <p id="fErr" style="color:var(--bad);font-size:13px;min-height:18px;margin:4px 0">${esc(UI.addErr)}</p>
+   <div style="display:flex;gap:8px"><button class="btn teal" id="fOk">Ajouter</button><button class="btn light" id="fCancel">Annuler</button></div></div>`;
+  document.getElementById("fNom").focus();
+}
+
+// ---- Vue en deux colonnes : liste des salariés à gauche, fiche à droite ----
+function score(p){let m=9999;ECH.forEach(([k])=>{const e=p.ech[k];if(e.nc||e.rdv)return;if(!e.date)m=Math.min(m,-999);else m=Math.min(m,days(e.date))});return m}
+const alpha=(x,y)=>x.nom.localeCompare(y.nom,"fr");
+// Recherche par nom : sans accents ni majuscules, dans tout l'onglet
+const sansAcc=t=>String(t||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+const trouve=p=>!UI.q||sansAcc(p.nom).includes(sansAcc(UI.q).trim());
+function listeOnglet(){
+  if(UI.tab==="archives")return byAg(S.archives||[]).filter(trouve).sort(alpha);
+  if(UI.q)return byAg(UI.tab==="arrivees"?S.arrivees:S.poste).filter(trouve).sort(alpha);
+  if(UI.tab==="arrivees")return byAg(S.arrivees).slice().sort(alpha);
+  let l=byAg(S.poste);
+  if(UI.onlyTodo)l=l.filter(todo).sort(alpha);
+  else l=l.slice().sort(alpha);
+  return l;
+}
+function itemArchive(p){
+  const act=UI.open===p.id;
+  return `<div class="li-row"><button class="li ${act?"active":""}" data-open="${p.id}" aria-current="${act}">
+    <div class="av" style="opacity:.6">${initials(p.nom)}</div>
+    <div class="li-t"><b>${esc(p.nom)}</b><span>${p.archive_le?"Archivé(e) le "+fmt(p.archive_le):"Archivé(e)"}</span></div></button></div>`;
+}
+function itemListe(p){
+  if(UI.tab==="archives")return itemArchive(p);
+  const pr=progress(p),act=UI.open===p.id;
+  // 1re pastille = dossier administratif (rouge tant qu'il n'est pas complet ; la CMU ne compte pas)
+  const dots=`<i class="dot st-${pr.done?"ok":"bad"}" title="Dossier : ${pr.done?"complet":"incomplet ("+pr.v+"/"+pr.t+")"}"></i>`+
+    ECH.map(([k,l,th])=>{const s=echStatus(p.ech[k],th);return `<i class="dot st-${s.k}" title="${l} : ${s.t}"></i>`}).join("");
+  return `<div class="li-row"><button class="li ${act?"active":""}" data-open="${p.id}" aria-current="${act}">
+    <div class="av">${initials(p.nom)}</div>
+    <div class="li-t"><b>${esc(p.nom)}</b><span>${p.embauche?"Embauché(e) le "+fmt(p.embauche):"&nbsp;"}</span>
+      <div class="li-m"><span class="dots">${dots}</span><span class="mini"><i style="width:${pr.v/pr.t*100}%"></i></span><small>${pr.v}/${pr.t}</small></div></div></button><button class="li-x li-arch" data-archiver="${p.id}" title="Archiver ${esc(p.nom)} (a quitté AID’Aux)" aria-label="Archiver ${esc(p.nom)}">🗄</button><button class="li-x" data-retirer="${p.id}" title="Supprimer ${esc(p.nom)}" aria-label="Supprimer ${esc(p.nom)}">×</button></div>`;
+}
+function listeHTML(l,vide){
+  if(l.length)return l.map(itemListe).join("");
+  return UI.q?`<div class="empty small">Aucun salarié ne correspond à « ${esc(UI.q)} ».</div>`:vide;
+}
+// on ne redessine que la liste pendant la frappe (le champ garde le curseur)
+document.addEventListener("input",ev=>{
+  if(ev.target.id!=="recherche")return;
+  UI.q=ev.target.value;
+  const w=document.querySelector(".col-list .li-wrap");
+  if(w)w.innerHTML=listeHTML(listeOnglet(),"");
+});
+function viewSplit(){
+  const l=listeOnglet();
+  let head=`<div class="li-search"><input type="search" id="recherche" value="${esc(UI.q||"")}" placeholder="🔍 Rechercher un salarié…" aria-label="Rechercher un salarié" autocomplete="off"></div>`;
+  if(UI.tab==="poste"){
+    const nTodo=byAg(S.poste).filter(todo).length;
+    head+=`<div class="li-head"><button class="chip" data-only="1" aria-pressed="${UI.onlyTodo}">À traiter (${nTodo})</button><button class="chip" data-only="0" aria-pressed="${!UI.onlyTodo}">Tout le monde (${byAg(S.poste).length})</button></div>`;
+  }
+  const vide=UI.tab==="archives"?`<div class="empty small">Aucun salarié archivé.</div>`:UI.tab==="arrivees"?`<div class="empty small">Aucune arrivée en cours.<br>Ajoutez un nouveau salarié pour suivre son dossier d’embauche.</div>`
+    :`<div class="empty small">Rien à traiter : dossiers complets et échéances à jour.<br><button class="chip" data-only="0" style="margin-top:8px">Voir tout le monde</button></div>`;
+  const sel=UI.open&&find(UI.open);
+  if(UI.open&&!sel)UI.open=null;
+  return `<div class="split ${sel?"has-open":""}">
+    <aside class="col-list" aria-label="Salariés">${head}<div class="li-wrap">${listeHTML(l,vide)}</div></aside>
+    <section class="col-pane">${sel?(UI.tab==="archives"?ficheArchive(sel):fiche(sel)):`<div class="empty"><h3>Choisissez un salarié</h3>Cliquez sur un nom à gauche pour voir ses échéances et son dossier administratif.</div>`}</section>
+  </div>`;
+}
+const cb=(attr,checked,label,dis)=>`<label class="cbx"><input type="checkbox" ${attr} ${checked?"checked":""} ${dis?"disabled":""}><span class="box" aria-hidden="true"></span>${label?`<span>${label}</span>`:""}</label>`;
+const present=d=>d.s==="recu"||d.s==="verifie";
+function ligneDoc(a,k,lab){
+  const d=a.docs[k],nc=d.s==="nc";
+  let pres;
+  if(k==="piece"){
+    const ty=d.types||{};
+    // CNI cochée → passeport et titre masqués ; passeport ou titre cochés → CNI masquée
+    const visibles=Object.entries(PIECE_T).filter(([v])=>ty.cni?v==="cni":(ty.passeport||ty.titre)?v!=="cni":true);
+    pres=`<div class="ptypes">${visibles.map(([v,t])=>cb(`data-ptyp="${v}" aria-label="${t}"`,!!ty[v],t,nc)).join("")}</div>`;
+  } else pres=cb(`data-pres="${k}" aria-label="${lab} présent dans le dossier"`,present(d),"",nc);
+  return `<div class="trow ${nc?"is-nc":""} ${d.s==="verifie"?"is-ok":""}">
+    <div class="t-doc">${lab}${k==="cpam"?`<div class="cmu">${cb(`data-cmu aria-label="Le salarié a la CMU"`,!!d.cmu,"CMU")}</div>`:""}</div>
+    <div class="t-pres">${pres}</div>
+    <div class="t-com"><input class="com" data-com="${k}" value="${esc(d.c)}" placeholder="Commentaire" aria-label="Commentaire ${lab}"></div>
+    <div class="t-ver">${cb(`data-ver="${k}" aria-label="${lab} vérifié"`,d.s==="verifie","",nc)}</div>
+    <div class="t-nc"><button class="nc" data-nc="${k}" aria-pressed="${nc}" title="Non concerné">N/C</button></div>
+  </div>`;
+}
+
+// ---- « La vie du salarié » ----
+const VIE=[["css","🧾","Attestation CSS","cpam"],["medecine","🩺","Visite médecine du travail","medecine"],["entretien","💬","Entretien annuel","entretien"]];
+VIE.forEach(v=>{v[2]=v[2]}); // libellés
+function accHead(k,ico,titre,sous,badge,st){
+  const op=!!UI.acc[k];
+  return `<button class="acc-h ${op?"open":""}" data-acc="${k}" aria-expanded="${op}">
+    <span class="acc-ico" aria-hidden="true">${ico}</span>
+    <span class="acc-t"><b>${titre}</b><small>${sous}</small></span>
+    <span class="acc-badge st-${st}">${badge}</span><span class="acc-chev" aria-hidden="true">›</span></button>`;
+}
+function compte(e,th){
+  if(e.nc)return{n:"—",u:"non concerné",k:"nc"};
+  if(e.rdv){const d=days(e.rdv);return d>=0?{n:"J-"+d,u:"avant le RDV du "+fmt(e.rdv),k:"rdv"}:{n:"+"+(-d)+" j",u:"depuis le RDV du "+fmt(e.rdv)+" : mettre à jour",k:"bad"}}
+  if(!e.date)return{n:"?",u:"date à renseigner",k:"vide"};
+  const d=days(e.date);
+  if(d<0)return{n:"+"+(-d)+" j",u:"de retard",k:"bad"};
+  return{n:d,u:d>1?"jours restants":"jour restant",k:d<=th?"warn":"ok"};
+}
+function carteEch(a,k,ico,titre,ek){
+  const th=ECH.find(x=>x[0]===ek)[2],e=a.ech[ek],v=a.vie[k],st=echStatus(e,th),c=compte(e,th);
+  return `<article class="vcard st-${st.k} vc-${k}" id="vie-${ek}">
+    <header><span class="v-ico" aria-hidden="true">${ico}</span><h4>${titre}</h4><span class="v-st">${st.t}</span></header>
+    <div class="v-body">
+      <div class="count st-${c.k}"><b>${c.n}</b><small>${c.u}</small></div>
+      <div class="v-fields">
+        <label>${k==="css"?"Valable jusqu’au":"Prochaine échéance"}<input type="date" min="2026-01-01" max="2040-12-31" data-echd="${ek}|date" value="${e.date||""}" ${e.nc?"disabled":""}></label>
+        ${k==="css"?"":`<label>RDV pris le<span class="rdvrow"><input type="date" min="2026-01-01" max="2040-12-31" data-echd="${ek}|rdv" value="${e.rdv||""}" ${e.nc?"disabled":""}>${e.rdv?`<button class="x" data-vunrdv="${ek}" title="Retirer le RDV" aria-label="Retirer le RDV">×</button>`:""}</span></label>`}
+      </div>
     </div>
+    <div class="v-row" style="justify-content:flex-end">
+      <button class="nc" data-vnc="${ek}" aria-pressed="${!!e.nc}">N/C</button></div>
+    <textarea class="v-com" data-viec="${k}" rows="2" placeholder="Commentaire…" aria-label="Commentaire ${titre}">${esc(v.c)}</textarea>
+  </article>`;
+}
+// Un avenant vide (ni date ni objet) ne compte pas comme « à faire signer »
+const avVide=x=>!x.signe&&!x.date&&!String(x.c||"").trim();
+const avNonSigne=x=>!x.signe&&!avVide(x);
+function carteAvenants(a){
+  // ordre chronologique (plus ancien en haut) ; un avenant sans date
+  // (en cours de saisie) reste en haut pour être rempli
+  a.vie.avenants.sort((x,y)=>(x.date?1:0)-(y.date?1:0)||String(x.date||"").localeCompare(String(y.date||"")));
+  const L=a.vie.avenants,ns=L.filter(avNonSigne).length;
+  const st=ns?"bad":"ok";
+  const lignes=L.length?L.map((av,i)=>`<div class="av-l ${av.signe?"is-ok":""} ${avVide(av)?"is-vide":""}">
+      <input type="date" min="2026-01-01" max="2040-12-31" data-av="${i}|date" value="${av.date||""}" aria-label="Date de l’avenant">
+      <input class="com" data-av="${i}|c" value="${esc(av.c)}" placeholder="Objet : heures, poste, durée…" aria-label="Objet de l’avenant">
+      ${cb(`data-av="${i}|signe"`,av.signe,"Signé")}
+      <button class="x" data-avdel="${i}" title="Supprimer" aria-label="Supprimer cet avenant">×</button></div>`).join("")
+    :`<p class="v-empty">Aucun avenant pour l’instant.</p>`;
+  return `<article class="vcard vc-av st-${st} wide" id="vie-avenants">
+    <header><span class="v-ico" aria-hidden="true">✍️</span><h4>Avenants</h4><span class="v-st">${L.some(x=>!avVide(x))?(ns?ns+" à faire signer":"Tous signés"):"Aucun"}</span></header>
+    <div class="av-list">${lignes}</div>
+    <button class="btn light av-add" data-avadd>+ Ajouter un avenant</button>
+  </article>`;
+}
+// Compte les 4 rubriques : avenants (tous signés ou aucun), CSS, médecine,
+// entretien. Une échéance encore valide (même si la date approche) est à jour.
+function vieScore(a){
+  let ok=0,t=0;
+  VIE.forEach(([k,,,ek])=>{t++;const th=ECH.find(x=>x[0]===ek)[2],s=echStatus(a.ech[ek],th).k;if(s==="ok"||s==="nc"||s==="warn")ok++});
+  t++;if(!a.vie.avenants.some(avNonSigne))ok++;
+  return{ok,t};
+}
+function vieSection(a){
+  const sc=vieScore(a);
+  return `${accHead("vie","🌱","La vie du salarié","Avenants, attestation CSS, médecine du travail, entretiens",`${sc.ok} / ${sc.t}`,sc.ok===sc.t?"ok":"bad")}
+   <div class="acc-body" ${UI.acc.vie?"":"hidden"}><div class="vie-grid">
+     ${carteAvenants(a)}
+     ${VIE.map(([k,ico,t,ek])=>carteEch(a,k,ico,t,ek)).join("")}
+   </div></div>`;
+}
+function fiche(a){
+  const p=progress(a);
+  const nCl=CLASSEUR.filter(([k])=>a.classeur[k]).length;
+  const pills=ECH.map(([k,l,th])=>{const s=echStatus(a.ech[k],th);const op=UI.editor&&UI.editor.id===a.id&&UI.editor.k===k;return `<button class="pill st-${s.k} ${op?"open":""}" data-ed="${a.id}|${k}" aria-expanded="${op}">${l}<small>${s.t}${s.s?", "+s.s:""}</small></button>`}).join("");
+  const thead=`<div class="trow thead"><div class="t-doc"></div><div class="t-pres">Présent</div><div class="t-com">Commentaires</div><div class="t-ver">Vérifié</div><div class="t-nc"></div></div>`;
+  return `<div class="detail">
+   <div class="dhead"><button class="ghost back-m" data-back>← Liste</button><div class="av">${initials(a.nom)}</div>
+     <div style="flex:1;min-width:180px"><h2>${esc(a.nom)}</h2><span style="color:var(--ink2);font-size:13px">${a.embauche?"Embauché(e) le "+fmt(a.embauche):""}${a.phase==="arrivee"?" · arrivée en cours":""}</span></div>
+     <b style="font-family:'Baloo 2';font-size:22px" title="Éléments du dossier vérifiés">${p.v} / ${p.t}</b></div>
+   <div class="prog"><i class="pv" style="width:${p.v/p.t*100}%"></i><i class="pr" style="width:${p.r/p.t*100}%"></i></div>
 
-    <div class="card">
-      <div class="card-icon icon-recrutement">📝</div>
-      <h2>Aid'Aux Recrutement</h2>
-      <p>Dossiers de candidature, tests et documents d'embauche</p>
-      <a href="https://aidaux-recrutement.vercel.app" target="_blank" rel="noopener">Ouvrir</a>
-    </div>
+   <div class="sec"><h3>Échéances</h3><div class="pills">${pills}</div>${UI.editor&&UI.editor.id===a.id?editor(a,UI.editor.k):""}</div>
 
-    <div class="card">
-      <div class="card-icon icon-prospects">🤝</div>
-      <h2>Aid'Aux Prospects</h2>
-      <p>Gestion des dossiers d'évaluation des bénéficiaires potentiels</p>
-      <a href="https://aidaux-prospect.vercel.app" target="_blank" rel="noopener">Ouvrir</a>
-    </div>
+   ${accHead("admin","🗂️","Dossier administratif obligatoire","Pièces, signatures, classeur et Digiposte",`${p.v} / ${p.t}`,p.v===p.t?"ok":"bad")}
+   <div class="acc-body" ${UI.acc.admin?"":"hidden"}><div class="sec dossier">
+     <div class="dates" style="margin-bottom:6px"><label>Date du dossier<input type="date" min="2026-01-01" max="2040-12-31" data-date="dossier" value="${a.dates.dossier||""}"></label><label>Email du salarié <small>(relances titre de séjour &amp; CSS)</small><input type="email" data-email value="${esc(a.email||"")}" placeholder="prenom.nom@exemple.fr" autocomplete="off"></label></div>
+     <h4>Documents obligatoires <small>présents dans le dossier</small></h4>
+     <div class="table">${thead}${DOCS_OBL.map(([k,l])=>ligneDoc(a,k,l)).join("")}</div>
+     <h4>Documents à faire signer</h4>
+     <div class="table">${thead}${DOCS_SIGN.map(([k,l])=>ligneDoc(a,k,l)).join("")}
+       <div class="trow ${nCl===CLASSEUR.length?"is-ok":""}"><div class="t-doc">Classeur complet <small>(${nCl}/${CLASSEUR.length})</small></div>
+         <div class="t-wide"><div class="cl-list">${CLASSEUR.map(([k,l])=>cb(`data-cl="${k}"`,!!a.classeur[k],l)).join("")}</div></div></div>
+     </div>
+     <h4>Digiposte</h4>
+     <div class="dates">${DATES.map(([k,l])=>`<label>${l}<input type="date" min="2026-01-01" max="2040-12-31" data-date="${k}" value="${a.dates[k]||""}"></label>`).join("")}</div>
+     <p class="note">Les cases sont enregistrées dès qu’on les coche. « Vérifié » coche aussi « Présent ».</p>
+   </div></div>
+   ${vieSection(a)}
+   <div class="sec" style="text-align:right"><button class="ghost" data-archiver="${a.id}">🗄 Archiver (a quitté AID’Aux)</button> <button class="ghost" data-retirer="${a.id}">Supprimer</button></div>
+  </div>`;
+}
+function editor(p,k){
+  const e=p.ech[k],l=ECH.find(x=>x[0]===k)[1];
+  return `<div class="editor"><b style="width:100%">${l}</b>
+   <label>Nouvelle date de validité<input type="date" min="2026-01-01" max="2040-12-31" id="edDate" value="${e.date||""}"></label><button class="btn teal" data-save>Enregistrer</button>
+   <label>RDV pris le<input type="date" min="2026-01-01" max="2040-12-31" id="edRdv" value="${e.rdv||""}"></label><button class="btn light" data-rdv>Noter le RDV</button>
+   ${e.rdv?`<button class="btn light" data-unrdv>Retirer le RDV</button>`:""}
+   <button class="nc" data-ncech aria-pressed="${!!e.nc}">Non concerné</button></div>`;
+}
 
-    <div class="card">
-      <div class="card-icon icon-km">🚗</div>
-      <h2>Frais Kilométriques</h2>
-      <p>Suivi des trajets et calcul automatique du forfait de remboursement</p>
-      <a href="https://aidaux-km.vercel.app" target="_blank" rel="noopener">Ouvrir</a>
-    </div>
+function render(){
+  document.getElementById("today").textContent="Aujourd’hui, "+TODAY.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
+  renderHero();renderFeed();renderTabs();renderAdd();
+  const v=document.getElementById("view");
+  if(ERR){v.innerHTML=`<div class="empty"><h3>Impossible de charger les dossiers</h3>${esc(ERR)}<br><br><button class="btn" onclick="location.reload()">Réessayer</button></div>`;return}
+  if(!LOADED){v.innerHTML=`<div class="empty">Chargement des dossiers…</div>`;return}
+  v.innerHTML=viewSplit();
+}
 
-    <div class="card">
-      <div class="card-icon icon-prepaie">💶</div>
-      <h2>Aid'Aux Pré-paie</h2>
-      <p>Éléments variables de paie par salarié, par agence et par mois</p>
-      <a href="https://aidaux-prepaie.vercel.app" target="_blank" rel="noopener">Ouvrir</a>
-    </div>
+function checkDone(a){
+  if(a.phase!=="arrivee"||!progress(a).done)return false;
+  a.phase="poste";
+  S.arrivees=S.arrivees.filter(x=>x!==a);S.poste.unshift(a);
+  push(a,{txt:"Dossier de "+a.nom+" bouclé"});
+  UI.tab="poste";UI.onlyTodo=false;render(); // la fiche reste ouverte
+  toast("Dossier de "+first(a.nom)+" bouclé ! Direction l’espace En poste");confetti();
+  return true;
+}
+function find(id){return S.arrivees.find(x=>x.id===id)||S.poste.find(x=>x.id===id)||(S.archives||[]).find(x=>x.id===id)}
+function ficheArchive(a){
+  return `<div class="detail"><div class="dhead"><button class="ghost back-m" data-back>← Liste</button><div class="av">${initials(a.nom)}</div>
+    <div><h2 style="margin:0">${esc(a.nom)}</h2><small>${esc(a.agence||"")}${a.embauche?" · embauché(e) le "+fmt(a.embauche):""}${a.archive_le?" · archivé(e) le "+fmt(a.archive_le):""}</small></div></div>
+    <div class="empty" style="margin-top:14px">Ce salarié a quitté AID’Aux : son dossier est conservé ici, sans relances ni alertes.<br><br>
+    <button class="chip" data-desarchiver="${a.id}">↩ Désarchiver (retour dans la liste)</button></div></div>`;
+}
+async function archiver(id,oui){
+  const p=find(id);if(!p)return;
+  if(!confirm(oui?"Archiver "+p.nom+" ? (a quitté AID’Aux)":"Remettre "+p.nom+" dans la liste ?"))return;
+  try{const j=await api("/api/salaries/"+p.id+"/archive",{method:"POST",body:JSON.stringify({archive:oui})});
+    S.feed=j.feed||S.feed;
+    S.arrivees=S.arrivees.filter(x=>x!==p);S.poste=S.poste.filter(x=>x!==p);S.archives=(S.archives||[]).filter(x=>x!==p);
+    const n=norm(j.salarie);
+    if(oui)S.archives.push(n);else{S.poste.push(n);UI.tab="poste"}
+    UI.open=oui?null:n.id;UI.editor=null;render();renderFeed();toast(p.nom+(oui?" archivé(e)":" désarchivé(e)"))}
+  catch(e){toast("Impossible : "+e.message)}
+}
 
-    <div class="card">
-      <div class="card-icon icon-dossiers">🗂️</div>
-      <h2>Aid'Aux Dossiers</h2>
-      <p>Suivi des documents des salariés et relances des titres de séjour</p>
-      <a href="https://aidaux-dossiers.vercel.app" target="_blank" rel="noopener">Ouvrir</a>
-    </div>
-  </div>
+// ───── Import des emails depuis un export Excel de Ximi ─────
+const nk=x=>String(x||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-Z]+/g," ").trim();
+const cle=x=>nk(x).split(" ").filter(Boolean).sort().join(" ");
+function lireXimi(rows){
+  // Cherche la ligne d'en-tête qui contient une colonne email
+  let h=-1,cMail=-1;
+  for(let i=0;i<Math.min(rows.length,20)&&h<0;i++){
+    (rows[i]||[]).forEach((c,j)=>{if(cMail<0&&/MAIL/.test(nk(c))){cMail=j;h=i}});
+  }
+  if(h<0)throw new Error("Aucune colonne « email » trouvée dans le fichier");
+  const head=rows[h].map(nk);
+  const cPre=head.findIndex(c=>/^PRENOM/.test(c));
+  let cNom=head.findIndex(c=>/^NOM( D USAGE| USUEL)?$/.test(c));
+  if(cNom<0)cNom=head.findIndex(c=>/^NOM/.test(c)&&!/NAISSANCE|JEUNE/.test(c));
+  if(cNom<0)cNom=head.findIndex(c=>/SALARIE|INTERVENANT|IDENTITE|COLLABORATEUR/.test(c));
+  if(cNom<0)throw new Error("Aucune colonne « nom » trouvée dans le fichier");
+  const out=[];
+  rows.slice(h+1).forEach(r=>{
+    const mail=String(r[cMail]||"").trim().toLowerCase();
+    const nom=[r[cNom],cPre>=0?r[cPre]:""].join(" ").trim();
+    if(nom&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail))out.push({nom,mail});
+  });
+  return out;
+}
+function rapprocher(lignes){
+  const tous=[...S.arrivees,...S.poste],idx={};
+  lignes.forEach(l=>{idx[cle(l.nom)]=l.mail});
+  const ok=[],deja=[],absents=[];
+  tous.forEach(a=>{
+    let m=idx[cle(a.nom)];
+    if(!m){ // repli : tous les mots du nom de l'app se retrouvent dans une ligne Ximi
+      const mots=cle(a.nom).split(" ");
+      const c=lignes.filter(l=>{const k=" "+cle(l.nom)+" ";return mots.every(w=>k.includes(" "+w+" "))});
+      if(c.length===1)m=c[0].mail;
+    }
+    if(!m)absents.push(a);
+    else if((a.email||"").toLowerCase()===m)deja.push(a);
+    else ok.push({a,mail:m});
+  });
+  return {ok,deja,absents};
+}
+function renderImp(){
+  const r=UI.imp;
+  const li=r.ok.map(({a,mail})=>`<li><b>${esc(a.nom)}</b> → ${esc(mail)}${a.email?` <small style="color:var(--ink2)">(remplace ${esc(a.email)})</small>`:""}</li>`).join("");
+  const ab=r.absents.map(a=>esc(a.nom)).join(", ");
+  return `<div class="detail" style="margin-bottom:14px"><h3 style="font-size:20px;margin-bottom:6px">Import des emails Ximi</h3>
+   <p style="margin-bottom:10px">${r.ok.length} email(s) à enregistrer · ${r.deja.length} déjà à jour · ${r.absents.length} salarié(s) non trouvé(s) dans le fichier</p>
+   ${r.ok.length?`<ul style="max-height:260px;overflow:auto;margin:0 0 10px 18px;font-size:14px">${li}</ul>`:""}
+   ${r.absents.length?`<details style="margin-bottom:10px;font-size:13px"><summary>Voir les salariés non trouvés</summary><p style="margin-top:6px">${ab}</p></details>`:""}
+   <div style="display:flex;gap:8px">${r.ok.length?`<button class="btn teal" id="impOk">Enregistrer ${r.ok.length} email(s)</button>`:""}<button class="btn light" id="impCancel">Fermer</button><button class="btn light" id="impXls" title="Importer un export Excel de Ximi">Fichier Excel…</button></div></div>`;
+}
+document.addEventListener("change",async ev=>{
+  if(ev.target.id!=="impFile")return;
+  const f=ev.target.files[0];ev.target.value="";if(!f)return;
+  try{
+    if(!window.XLSX)throw new Error("lecteur Excel non chargé, rechargez la page");
+    const wb=XLSX.read(await f.arrayBuffer(),{type:"array"});
+    const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:""});
+    const lignes=lireXimi(rows);
+    if(!lignes.length)throw new Error("aucune ligne avec un email valide");
+    UI.imp=rapprocher(lignes);UI.adding=false;render();
+  }catch(e){toast("Import impossible : "+e.message)}
+});
+document.addEventListener("click",async ev=>{
+  const t=ev.target.closest("button");if(!t)return;
+  const a=UI.open&&find(UI.open);
+  if(t.dataset.tab){UI.tab=t.dataset.tab;UI.open=null;UI.editor=null;return render()}
+  if(t.dataset.ag){UI.agence=t.dataset.ag;return render()}
+  if(t.id==="addBtn"){UI.adding=!UI.adding;UI.addErr="";return render()}
+  if(t.id==="impBtn"){
+    t.disabled=true;const lib=t.textContent;t.textContent="⏳ Ximi…";
+    try{const j=await api("/api/ximi/emails");
+      UI.imp=rapprocher(j.lignes||[]);UI.adding=false;render();
+      if(!(j.lignes||[]).length)toast("Ximi n’a renvoyé aucun email pour vos salariés");
+    }catch(e){if(e.message!=="login")toast("Ximi indisponible ("+e.message+"). Vous pouvez importer un export Excel avec le bouton « Fichier ».")}
+    finally{t.disabled=false;t.textContent=lib}
+    return}
+  if(t.id==="impXls"){document.getElementById("impFile").click();return}
+  if(t.id==="impCancel"){UI.imp=null;return render()}
+  if(t.id==="impOk"){
+    const n=UI.imp.ok.length;
+    UI.imp.ok.forEach(({a,mail})=>{a.email=mail;push(a)});
+    UI.imp=null;render();toast(n+" email(s) enregistré(s)");return
+  }
+  if(t.dataset.ph){document.querySelectorAll("[data-ph]").forEach(b=>b.setAttribute("aria-pressed",b===t));return}
+  if(t.id==="fCancel"){UI.adding=false;return render()}
+  if(t.id==="fOk"){
+    const nom=document.getElementById("fNom").value.trim(),agence=AGENCES[0],embauche=document.getElementById("fEmb").value;
+    const phase=document.querySelector('[data-ph][aria-pressed="true"]').dataset.ph;
+    if(!nom){document.getElementById("fErr").textContent="Indiquez le nom et le prénom";return}
+    t.disabled=true;
+    try{const j=await api("/api/salaries",{method:"POST",body:JSON.stringify({nom,agence,embauche,phase})});
+      const p=norm(j.salarie);S.poste.push(p);S.feed=j.feed||S.feed;
+      UI.adding=false;UI.tab="poste";UI.onlyTodo=false;UI.open=p.id;render();toast(nom+" ajouté(e)")}
+    catch(e){t.disabled=false;document.getElementById("fErr").textContent=e.message}
+    return;
+  }
+  if(t.dataset.open){UI.open=t.dataset.open;UI.editor=null;render();if(innerWidth<=900)window.scrollTo({top:document.querySelector(".bar-tabs").offsetTop-10});return}
+  if(t.hasAttribute("data-back")){UI.open=null;return render()}
+  if(t.dataset.archiver){await archiver(t.dataset.archiver,true);return}
+  if(t.dataset.desarchiver){await archiver(t.dataset.desarchiver,false);return}
+  if(t.dataset.retirer){
+    const p=find(t.dataset.retirer);if(!p||!confirm("Êtes-vous sûr(e) de vouloir supprimer "+p.nom+" ?"))return;
+    try{await api("/api/salaries/"+p.id,{method:"DELETE"});S.arrivees=S.arrivees.filter(x=>x!==p);S.poste=S.poste.filter(x=>x!==p);UI.open=null;UI.editor=null;render();toast(p.nom+" supprimé(e)")}
+    catch(e){toast("Impossible de supprimer : "+e.message)}
+    return;
+  }
+  if(t.dataset.nc&&a){const d=a.docs[t.dataset.nc];d.s=d.s==="nc"?"manquant":"nc";render();if(!checkDone(a))push(a);return}
+  if(t.dataset.only){UI.onlyTodo=t.dataset.only==="1";return render()}
+  if(t.dataset.acc){UI.acc[t.dataset.acc]=!UI.acc[t.dataset.acc];return render()}
+  if(t.dataset.ed&&!t.dataset.ed.endsWith("|piece")){const k=t.dataset.ed.split("|")[1];UI.acc.vie=true;UI.editor=null;render();
+    const el=document.getElementById("vie-"+k);if(el){el.scrollIntoView({behavior:"smooth",block:"center"});el.classList.add("flash");setTimeout(()=>el.classList.remove("flash"),1200)}return}
+  if(a&&t.dataset.avadd!==undefined){a.vie.avenants.unshift({date:"",c:"",signe:false});render();push(a);return}
+  if(a&&t.dataset.avdel!==undefined){const i=+t.dataset.avdel;if(!confirm("Supprimer cet avenant ?"))return;a.vie.avenants.splice(i,1);render();push(a);return}
+  if(a&&t.dataset.vnc){const e=a.ech[t.dataset.vnc];e.nc=!e.nc;render();push(a);return}
+  if(a&&t.dataset.vunrdv){a.ech[t.dataset.vunrdv].rdv="";render();push(a);return}
+  if(t.dataset.ed){const [id,k]=t.dataset.ed.split("|");UI.editor=(UI.editor&&UI.editor.id===id&&UI.editor.k===k)?null:{id,k};return render()}
+  if(UI.editor&&(t.hasAttribute("data-save")||t.hasAttribute("data-rdv")||t.hasAttribute("data-unrdv")||t.hasAttribute("data-ncech"))){
+    const p=find(UI.editor.id),k=UI.editor.k,e=p.ech[k],l=ECH.find(x=>x[0]===k)[1];let news=null;
+    if(t.hasAttribute("data-save")){const v=document.getElementById("edDate").value;if(!v)return toast("Choisissez une date de validité");e.date=v;e.rdv="";e.nc=false;news={txt:l+" de "+p.nom+" à jour jusqu’au "+fmt(v)};toast(l+" de "+first(p.nom)+" à jour")}
+    if(t.hasAttribute("data-rdv")){const v=document.getElementById("edRdv").value;if(!v)return toast("Choisissez la date du RDV");e.rdv=v;news={txt:"RDV "+l.toLowerCase()+" pour "+p.nom+" le "+fmt(v),c:"coral"};toast("RDV noté")}
+    if(t.hasAttribute("data-unrdv")){e.rdv=""}
+    if(t.hasAttribute("data-ncech")){e.nc=!e.nc}
+    UI.editor=null;render();push(p,news);return;
+  }
+});
+/* Dates : quand on tape une date au clavier, le navigateur signale un changement
+   à chaque chiffre de l'année (0002, 0020, 0026...). L'écran était alors redessiné
+   et on perdait la main sur le champ -> année bloquée à « 0026 ».
+   On attend donc la fin de la saisie (sortie du champ ou Entrée) avant d'enregistrer.
+   Le calendrier (clic sur l'icône) enregistre tout de suite. */
+function horsBornes(t){return (t.min&&t.value<t.min)||(t.max&&t.value>t.max)}
+document.addEventListener("keydown",ev=>{const t=ev.target;if(t.type==="date"){
+  if(ev.key==="Enter"){t.blur();return}t.dataset.saisie="1"}},true);
+document.addEventListener("focusout",ev=>{const t=ev.target;if(t.type!=="date"||!t.dataset.saisie)return;
+  delete t.dataset.saisie;
+  if(t.value&&horsBornes(t)){toast("Année impossible : choisissez entre "+t.min.slice(0,4)+" et "+t.max.slice(0,4));return}
+  t.dispatchEvent(new Event("change",{bubbles:true}))},true);
+document.addEventListener("change",ev=>{
+  const t=ev.target;
+  if(t.type==="date"&&(t.dataset.saisie||(t.value&&horsBornes(t))))return; // saisie en cours
+  const a=UI.open&&find(UI.open);if(!a)return;
+  if(t.dataset.com){a.docs[t.dataset.com].c=t.value;push(a);return}
+  // CMU : simple information, ne compte pas dans le dossier complet
+  if(t.hasAttribute("data-cmu")){a.docs.cpam.cmu=t.checked;render();push(a);return}
+  if(t.dataset.viec){a.vie[t.dataset.viec].c=t.value;push(a);return}
+  if(t.dataset.vief){const k=t.dataset.vief,v=a.vie[k];v.fait=t.checked;v.le=t.checked?new Date().toISOString().slice(0,10):"";
+    let news=null;
+    if(t.checked&&(k==="medecine"||k==="entretien")){a.ech[k].rdv="";const l=VIE.find(x=>x[0]===k)[2];news={txt:l+" faite pour "+a.nom};toast("Bravo 🎉 Pensez à noter la prochaine échéance");}
+    render();push(a,news);return}
+  if(t.dataset.echd){const [k,f]=t.dataset.echd.split("|"),e=a.ech[k];e[f]=t.value;if(f==="date"&&t.value){e.nc=false;if(a.vie[k])a.vie[k].fait=false}
+    let news=null;const l=ECH.find(x=>x[0]===k)[1];
+    if(f==="rdv"&&t.value)news={txt:"RDV "+l.toLowerCase()+" pour "+a.nom+" le "+fmt(t.value),c:"coral"};
+    render();push(a,news);return}
+  if(t.dataset.av){const [i,f]=t.dataset.av.split("|"),av=a.vie.avenants[+i];if(!av)return;av[f]=f==="signe"?t.checked:t.value;render();push(a);return}
+  if(t.hasAttribute("data-email")){a.email=t.value.trim();push(a);toast("Email enregistré");return}
+  if(t.dataset.date){a.dates[t.dataset.date]=t.value;render();if(!checkDone(a))push(a);return}
+  let coche=false;
+  if(t.dataset.pres){const d=a.docs[t.dataset.pres];d.s=t.checked?(d.s==="verifie"?"verifie":"recu"):"manquant";coche=true}
+  if(t.dataset.ver){const d=a.docs[t.dataset.ver];d.s=t.checked?"verifie":(d.s==="verifie"?"recu":d.s);
+    if(t.dataset.ver==="piece"&&t.checked&&!Object.values(d.types||{}).some(Boolean)){d.types={...(d.types||{}),[d.t||"cni"]:true}}coche=true}
+  if(t.dataset.ptyp){const d=a.docs.piece;d.types=d.types||{};d.types[t.dataset.ptyp]=t.checked;
+    if(t.checked){if(t.dataset.ptyp==="cni"){d.types.passeport=false;d.types.titre=false}else d.types.cni=false}
+    const un=Object.keys(PIECE_T).find(x=>d.types[x]);if(un)d.t=un;
+    // Pièce valable : CNI seule, OU passeport + titre de séjour ensemble
+    const ok=d.types.cni||(d.types.passeport&&d.types.titre);
+    d.s=ok?(d.s==="verifie"?"verifie":"recu"):"manquant";coche=true}
+  if(t.dataset.cl){a.classeur[t.dataset.cl]=t.checked;coche=true}
+  if(coche){render();if(!checkDone(a))push(a)}
+});
+document.addEventListener("keydown",ev=>{if(ev.key==="Enter"&&ev.target.id==="fNom")document.getElementById("fOk").click()});
 
-  <footer>AID'AUX — Services d'aide à la personne</footer>
+let tt;function toast(m){const el=document.getElementById("toast");el.textContent=m;el.classList.add("show");clearTimeout(tt);tt=setTimeout(()=>el.classList.remove("show"),3000)}
+function confetti(){
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches)return;
+  const cv=document.getElementById("confetti"),cx=cv.getContext("2d");
+  cv.width=innerWidth;cv.height=innerHeight;
+  const cols=["#1B2A6B","#13B3B3","#E8583A","#FFC94A"];
+  const ps=Array.from({length:160},()=>({x:innerWidth/2,y:innerHeight*.45,vx:(Math.random()-.5)*16,vy:Math.random()*-14-4,r:Math.random()*6+4,c:cols[Math.random()*4|0],a:Math.random()*6,va:(Math.random()-.5)*.3}));
+  let f=0;(function step(){cx.clearRect(0,0,cv.width,cv.height);ps.forEach(p=>{p.vy+=.35;p.vx*=.99;p.x+=p.vx;p.y+=p.vy;p.a+=p.va;cx.save();cx.translate(p.x,p.y);cx.rotate(p.a);cx.fillStyle=p.c;cx.fillRect(-p.r/2,-p.r/4,p.r,p.r/2);cx.restore()});if(++f<150)requestAnimationFrame(step);else cx.clearRect(0,0,cv.width,cv.height)})();
+}
+if("serviceWorker" in navigator)navigator.serviceWorker.register("/sw.js").catch(()=>{});
+render();load();
+</script>
+{% endraw %}
 </body>
 </html>
