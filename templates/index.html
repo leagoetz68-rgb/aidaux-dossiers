@@ -672,7 +672,7 @@ function carteEnt(a,d){
       </div>
     </div>
     ${note}
-    <div class="v-row"><a class="btn light" href="/modeles/${d.f}" download>📄 Modèle Word</a>
+    <div class="v-row"><a class="btn light" href="/modeles/${d.f}?sid=${a.id}" download>📄 Modèle Word pré-rempli</a>
       <button class="nc" data-entnc="${d.k}" aria-pressed="${!!e.nc}">N/C</button></div>
     <textarea class="v-com" data-entc="${d.k}" rows="2" placeholder="Commentaire…" aria-label="Commentaire ${d.t}">${esc(e.c)}</textarea>
   </article>`;
