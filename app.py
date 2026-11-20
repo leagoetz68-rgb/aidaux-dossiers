@@ -1,7 +1,9 @@
+import datetime
+import io
 import json
 import os
 
-from flask import Flask, Response, abort, jsonify, render_template, request, send_from_directory, session
+from flask import Flask, Response, abort, send_file, jsonify, render_template, request, send_from_directory, session
 from psycopg2.extras import Json, RealDictCursor
 
 app = Flask(__name__)
@@ -289,20 +291,39 @@ def index():
     return render_template("index.html", user_email=session.get("user_email", ""))
 
 
-# Modèles Word des entretiens (fichiers .docx à la racine du dépôt) — accès réservé aux comptes connectés
-MODELES = {
-    "01_Suivi_1_mois.docx",
-    "02_Suivi_3_mois.docx",
-    "03_Suivi_6_mois.docx",
-    "04_Entretien_annuel.docx",
-    "05_Entretien_parcours_professionnel.docx",
-}
+# Modèles Word des entretiens (fichiers .docx à la racine du dépôt), pré-remplis
+# avec les infos du salarié quand on passe ?sid=<id> — accès réservé aux comptes connectés
+import modeles_word  # noqa: E402
+
+MODELES = set(modeles_word.MODELES)
 
 
 @app.route("/modeles/<nom>")
 def modele(nom):
     if nom not in MODELES:
         abort(404)
+    chemin = os.path.join(app.root_path, nom)
+    sid = request.args.get("sid", type=int)
+    if sid:
+        try:
+            conn = auth._conn()
+            try:
+                with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                    cur.execute("SELECT nom, agence, embauche, vie FROM dossiers_salaries WHERE id = %s", (sid,))
+                    row = cur.fetchone()
+            finally:
+                conn.close()
+            if row:
+                ent = (row.get("vie") or {}).get("ent") or {}
+                contenu = modeles_word.remplir(chemin, nom, row["nom"], row["agence"], row["embauche"], ent)
+                return send_file(
+                    io.BytesIO(contenu),
+                    as_attachment=True,
+                    download_name=modeles_word.nom_fichier(nom, row["nom"]),
+                    mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                )
+        except Exception:
+            pass  # en cas de souci : on donne le modèle vierge plutôt qu'une erreur
     return send_from_directory(app.root_path, nom, as_attachment=True)
 
 
