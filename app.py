@@ -1,7 +1,7 @@
 import json
 import os
 
-from flask import Flask, Response, jsonify, render_template, request, send_from_directory, session
+from flask import Flask, Response, abort, jsonify, render_template, request, send_from_directory, session
 from psycopg2.extras import Json, RealDictCursor
 
 app = Flask(__name__)
@@ -287,6 +287,23 @@ def service_worker():
 @app.route("/")
 def index():
     return render_template("index.html", user_email=session.get("user_email", ""))
+
+
+# Modèles Word des entretiens (dossier modeles/) — accès réservé aux comptes connectés
+MODELES = {
+    "01_Suivi_1_mois.docx",
+    "02_Suivi_3_mois.docx",
+    "03_Suivi_6_mois.docx",
+    "04_Entretien_annuel.docx",
+    "05_Entretien_parcours_professionnel.docx",
+}
+
+
+@app.route("/modeles/<nom>")
+def modele(nom):
+    if nom not in MODELES:
+        abort(404)
+    return send_from_directory(os.path.join(app.root_path, "modeles"), nom, as_attachment=True)
 
 
 @app.route("/favicon.ico")
