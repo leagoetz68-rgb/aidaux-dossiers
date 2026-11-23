@@ -433,7 +433,7 @@ const DOCS_SIGN=[["contrat","Contrat de travail"],["mutuelle","Mutuelle"]];
 const CLASSEUR=[["duerp","DUERP"],["rqth","RQTH"],["confiance","Personne de confiance"],["digiposte","Consentement Digiposte"],["image","Droit à l’image"],["resto","Carte restaurant"],["reception","Attestation réception et engagement"],["casier","Visibilité du casier n°3"]];
 const DATES=[["envoi","Contrat + mutuelle envoyés le"],["ident","Identifiant Digiposte créé le"],["depot","Documents déposés sur Digiposte le"]];
 const PIECE_T={cni:"CNI",titre:"Titre de séjour",passeport:"Passeport"};
-const ECH=[["piece","Pièce d’identité",90],["cpam","Attestation CSS",30],["medecine","Médecine du travail",60],["entretien","Entretien individuel",60]];
+const ECH=[["piece","Pièce d’identité",90],["cpam","Attestation CSS",30],["medecine","Médecine du travail",60],["entretien","Entretien individuel",60],["permis","Permis de conduire",90]];
 const STATUS_NEXT={manquant:"recu",recu:"verifie",verifie:"manquant"};
 const STATUS_LAB={manquant:"Manquant",recu:"Reçu",verifie:"Vérifié",nc:"Non concerné"};
 const labelOf=k=>([...DOCS_OBL,...DOCS_SIGN].find(x=>x[0]===k)||[,k])[1];
@@ -447,7 +447,7 @@ function norm(p){
   if(!p.docs.piece.types){p.docs.piece.types={};if(p.docs.piece.s==="recu"||p.docs.piece.s==="verifie")p.docs.piece.types[p.docs.piece.t]=true}
   p.classeur=p.classeur||{};CLASSEUR.forEach(([k])=>{p.classeur[k]=!!p.classeur[k]});
   p.dates=p.dates||{};DATES.forEach(([k])=>{p.dates[k]=p.dates[k]||""});
-  p.ech=p.ech||{};ECH.forEach(([k])=>{p.ech[k]=p.ech[k]||{date:"",rdv:""}});
+  p.ech=p.ech||{};ECH.forEach(([k])=>{p.ech[k]=p.ech[k]||{date:"",rdv:"",nc:k==="permis"&&!!(p.docs.permis&&p.docs.permis.s==="nc")}});
   p.vie=p.vie||{};p.vie.avenants=Array.isArray(p.vie.avenants)?p.vie.avenants:[];p.vie.relances=Array.isArray(p.vie.relances)?p.vie.relances:[];
   VIE.forEach(([k])=>{p.vie[k]=p.vie[k]||{fait:false,c:""}});
   p.vie.ent=p.vie.ent||{};ENT.forEach(d=>{p.vie.ent[d.k]=Object.assign({le:"",rdv:"",c:"",nc:false},p.vie.ent[d.k])});
@@ -927,7 +927,7 @@ function editor(p,k){
    <label>Nouvelle date de validité<input type="date" min="2026-01-01" max="2040-12-31" id="edDate" value="${e.date||""}"></label><button class="btn teal" data-save>Enregistrer</button>
    ${k==="medecine"?`<label>RDV pris le<input type="date" min="2026-01-01" max="2040-12-31" id="edRdv" value="${e.rdv||""}"></label><button class="btn light" data-rdv>Noter le RDV</button>
    ${e.rdv?`<button class="btn light" data-unrdv>Retirer le RDV</button>`:""}
-   <button class="nc" data-ncech aria-pressed="${!!e.nc}">Non concerné</button>`:""}</div>`;
+   <button class="nc" data-ncech aria-pressed="${!!e.nc}">Non concerné</button>`:k==="permis"?`<button class="nc" data-ncech aria-pressed="${!!e.nc}">Non concerné</button>`:""}</div>`;
 }
 
 function render(){
