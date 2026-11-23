@@ -18,7 +18,7 @@ import os
 from datetime import date
 
 from flask import Blueprint, jsonify, request
-from psycopg2.extras import RealDictCursor
+from psycopg2.extras import Json, RealDictCursor
 
 import auth
 
@@ -54,6 +54,19 @@ def init_db():
         conn.commit()
     finally:
         conn.close()
+
+
+def _noter_relance(cur, salarie_id, jour, commentaire):
+    """Ajoute une relance automatique (mail) à l'historique « Suivi des relances »
+    de la fiche du salarié (champ vie.relances), sans toucher au reste de « vie »."""
+    entree = Json({"d": jour.isoformat(), "t": "mail", "c": commentaire[:200], "auto": True})
+    cur.execute(
+        """UPDATE dossiers_salaries
+           SET vie = jsonb_set(COALESCE(vie, '{}'::jsonb), '{relances}',
+                               COALESCE(vie->'relances', '[]'::jsonb) || jsonb_build_array(%s::jsonb))
+           WHERE id = %s""",
+        (entree, salarie_id),
+    )
 
 
 def _a_un_titre_de_sejour(docs):
@@ -245,6 +258,8 @@ def lancer_relances(aujourdhui=None):
                         _envoyer(dest, sujet, corps, bcc=COPIE_RH or None)
                         num = "1re" if code == "relance_3m" else "2e"
                         news = f"{num} relance {doc['nom']} envoyée à {s['nom']}"
+                        _noter_relance(cur, s["id"], aujourdhui,
+                                       f"Relance automatique : {doc['nom']} ({num} relance, fin le {_fmt(fin)})")
                     else:
                         dest = None
                         num = "1re" if code == "relance_3m" else "2e"
@@ -326,6 +341,8 @@ def lancer_rappels_medecine(aujourdhui=None):
                        VALUES (%s, %s, %s, %s) ON CONFLICT DO NOTHING""",
                     (s["id"], rdv, "medecine_7j", dest),
                 )
+                _noter_relance(cur, s["id"], aujourdhui,
+                               f"Rappel automatique : visite médecine du travail du {_fmt(rdv)}")
                 cur.execute(
                     "INSERT INTO dossiers_feed (texte, couleur, auteur) VALUES (%s, %s, %s)",
                     (f"Rappel visite médicale du {_fmt(rdv)} envoyé à {s['nom']}"[:300], "coral",
