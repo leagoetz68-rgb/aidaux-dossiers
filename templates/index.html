@@ -905,9 +905,9 @@ function editor(p,k){
   const e=p.ech[k],l=ECH.find(x=>x[0]===k)[1];
   return `<div class="editor"><b style="width:100%">${l}</b>
    <label>Nouvelle date de validité<input type="date" min="2026-01-01" max="2040-12-31" id="edDate" value="${e.date||""}"></label><button class="btn teal" data-save>Enregistrer</button>
-   <label>RDV pris le<input type="date" min="2026-01-01" max="2040-12-31" id="edRdv" value="${e.rdv||""}"></label><button class="btn light" data-rdv>Noter le RDV</button>
+   ${k==="medecine"?`<label>RDV pris le<input type="date" min="2026-01-01" max="2040-12-31" id="edRdv" value="${e.rdv||""}"></label><button class="btn light" data-rdv>Noter le RDV</button>
    ${e.rdv?`<button class="btn light" data-unrdv>Retirer le RDV</button>`:""}
-   <button class="nc" data-ncech aria-pressed="${!!e.nc}">Non concerné</button></div>`;
+   <button class="nc" data-ncech aria-pressed="${!!e.nc}">Non concerné</button>`:""}</div>`;
 }
 
 function render(){
