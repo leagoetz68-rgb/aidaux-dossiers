@@ -116,6 +116,9 @@ a.ghost{text-decoration:none}
 .btn.teal{background:var(--teal);color:#06302F}
 a.btn{text-decoration:none;display:inline-block}
 .btn.light{background:var(--card);color:var(--ink2);border:1px solid var(--line)}
+.verif-box{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:14px 0 4px;padding:10px 14px;border:1px dashed var(--line);border-radius:12px}
+.verif-box.on{border-style:solid;border-color:var(--warn);background:var(--warn-soft)}
+.verif-info{font-size:12.5px;color:var(--ink2)}
 .note{font-size:12.5px;color:var(--ink2);margin:10px 0 0}
 
 .detail{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px}
@@ -478,7 +481,8 @@ function echStatus(e,th){
 }
 // À traiter : une échéance proche/expirée/à renseigner OU une case du dossier pas cochée
 // (seule la case CMU, simple information, n'est pas comptée).
-const todo=p=>!progress(p).done||ECH.some(([k,,th])=>["vide","bad","warn"].includes(echStatus(p.ech[k],th).k));
+const verifie=p=>!!(p.dates&&p.dates.verif);
+const todo=p=>(!progress(p).done&&!verifie(p))||ECH.some(([k,,th])=>["vide","bad","warn"].includes(echStatus(p.ech[k],th).k));
 function progress(a){
   let v=0,r=0,t=0;
   [...DOCS_OBL,...DOCS_SIGN].forEach(([k])=>{t++;const s=a.docs[k].s;if(s==="verifie"||s==="nc")v++;else if(s==="recu")r++});
@@ -557,7 +561,7 @@ function itemListe(p){
   if(UI.tab==="archives")return itemArchive(p);
   const pr=progress(p),act=UI.open===p.id;
   // 1re pastille = dossier administratif (rouge tant qu'il n'est pas complet ; la CMU ne compte pas)
-  const dots=`<i class="dot st-${pr.done?"ok":"bad"}" title="Dossier : ${pr.done?"complet":"incomplet ("+pr.v+"/"+pr.t+")"}"></i>`+
+  const dots=`<i class="dot st-${pr.done?"ok":verifie(p)?"warn":"bad"}" title="Dossier : ${pr.done?"complet":(verifie(p)?"incomplet mais vérifié le "+fmt(p.dates.verif):"incomplet")+" ("+pr.v+"/"+pr.t+")"}"></i>`+
     ECH.map(([k,l,th])=>{const s=echStatus(p.ech[k],th);return `<i class="dot st-${s.k}" title="${l} : ${s.t}"></i>`}).join("");
   return `<div class="li-row"><button class="li ${act?"active":""}" data-open="${p.id}" aria-current="${act}">
     <div class="av">${initials(p.nom)}</div>
@@ -876,7 +880,7 @@ function fiche(a){
 
    <div class="sec"><h3>Échéances</h3><div class="pills">${pills}</div>${UI.editor&&UI.editor.id===a.id?editor(a,UI.editor.k):""}</div>
 
-   ${accHead("admin","🗂️","Dossier administratif obligatoire","Pièces, signatures, classeur et Digiposte",`${p.v} / ${p.t}`,p.v===p.t?"ok":"bad")}
+   ${accHead("admin","🗂️","Dossier administratif obligatoire","Pièces, signatures, classeur et Digiposte",`${p.v} / ${p.t}${p.v!==p.t&&verifie(a)?" · vérifié":""}`,p.v===p.t?"ok":verifie(a)?"warn":"bad")}
    <div class="acc-body" ${UI.acc.admin?"":"hidden"}><div class="sec dossier">
      <div class="dates" style="margin-bottom:6px"><label>Date du dossier<input type="date" min="2026-01-01" max="2040-12-31" data-date="dossier" value="${a.dates.dossier||""}"></label><label>Email du salarié <small>(relances titre de séjour &amp; CSS)</small><input type="email" data-email value="${esc(a.email||"")}" placeholder="prenom.nom@exemple.fr" autocomplete="off"></label></div>
      <h4>Documents obligatoires <small>présents dans le dossier</small></h4>
@@ -888,6 +892,8 @@ function fiche(a){
      </div>
      <h4>Digiposte</h4>
      <div class="dates">${DATES.map(([k,l])=>`<label>${l}<input type="date" min="2026-01-01" max="2040-12-31" data-date="${k}" value="${a.dates[k]||""}"></label>`).join("")}</div>
+     <div class="verif-box ${verifie(a)?"on":""}">${cb('data-verif',verifie(a),"<b>Dossier vérifié</b> <small>même s’il est incomplet</small>")}
+       <span class="verif-info">${verifie(a)?"Vérifié le "+fmt(a.dates.verif)+(a.dates.verif_par?" par "+esc(a.dates.verif_par):""):"À cocher quand le dossier a été contrôlé, même s’il manque des pièces."}</span></div>
      <p class="note">Les cases sont enregistrées dès qu’on les coche. « Vérifié » coche aussi « Présent ».</p>
    </div></div>
    ${vieSection(a)}
@@ -1105,6 +1111,11 @@ document.addEventListener("change",ev=>{
     render();push(a,news);return}
   if(t.dataset.av){const [i,f]=t.dataset.av.split("|"),av=a.vie.avenants[+i];if(!av)return;av[f]=f==="signe"?t.checked:t.value;render();push(a);return}
   if(t.hasAttribute("data-email")){a.email=t.value.trim();push(a);toast("Email enregistré");return}
+  if(t.hasAttribute("data-verif")){
+    if(t.checked){a.dates.verif=iso(new Date());a.dates.verif_par=document.body.dataset.user||""}
+    else{a.dates.verif="";a.dates.verif_par=""}
+    render();push(a,t.checked?{txt:"Dossier de "+a.nom+" vérifié"+(progress(a).done?"":" (incomplet)")}:null);
+    toast(t.checked?"Dossier vérifié":"Vérification retirée");return}
   if(t.dataset.date){a.dates[t.dataset.date]=t.value;render();if(!checkDone(a))push(a);return}
   let coche=false;
   if(t.dataset.pres){const d=a.docs[t.dataset.pres];d.s=t.checked?(d.s==="verifie"?"verifie":"recu"):"manquant";coche=true}
