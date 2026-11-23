@@ -119,6 +119,14 @@ a.btn{text-decoration:none;display:inline-block}
 .verif-box{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:14px 0 4px;padding:10px 14px;border:1px dashed var(--line);border-radius:12px}
 .verif-box.on{border-style:solid;border-color:var(--warn);background:var(--warn-soft)}
 .verif-info{font-size:12.5px;color:var(--ink2)}
+.rel-list{display:flex;flex-direction:column;gap:6px;margin:6px 0}
+.rel-l{display:grid;grid-template-columns:90px 120px 1fr auto;gap:8px;align-items:center;padding:6px 10px;border-radius:10px;background:var(--bg);font-size:13px}
+.rel-d{font-weight:600}.rel-c{color:var(--ink2)}
+.rel-add{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end;margin-top:6px}
+.rel-add label{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--ink2)}
+.rel-add input,.rel-add select{border:1px solid var(--line);border-radius:10px;padding:7px 10px;background:var(--bg);font:inherit;color:var(--ink)}
+.rel-grow{flex:1;min-width:200px}
+@media(max-width:600px){.rel-l{grid-template-columns:80px 1fr auto}.rel-c{grid-column:1/-1;order:5}}
 .note{font-size:12.5px;color:var(--ink2);margin:10px 0 0}
 
 .detail{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px}
@@ -440,7 +448,7 @@ function norm(p){
   p.classeur=p.classeur||{};CLASSEUR.forEach(([k])=>{p.classeur[k]=!!p.classeur[k]});
   p.dates=p.dates||{};DATES.forEach(([k])=>{p.dates[k]=p.dates[k]||""});
   p.ech=p.ech||{};ECH.forEach(([k])=>{p.ech[k]=p.ech[k]||{date:"",rdv:""}});
-  p.vie=p.vie||{};p.vie.avenants=Array.isArray(p.vie.avenants)?p.vie.avenants:[];
+  p.vie=p.vie||{};p.vie.avenants=Array.isArray(p.vie.avenants)?p.vie.avenants:[];p.vie.relances=Array.isArray(p.vie.relances)?p.vie.relances:[];
   VIE.forEach(([k])=>{p.vie[k]=p.vie[k]||{fait:false,c:""}});
   p.vie.ent=p.vie.ent||{};ENT.forEach(d=>{p.vie.ent[d.k]=Object.assign({le:"",rdv:"",c:"",nc:false},p.vie.ent[d.k])});
   p.id=String(p.id);return p;
@@ -481,6 +489,8 @@ function echStatus(e,th){
 }
 // À traiter : une échéance proche/expirée/à renseigner OU une case du dossier pas cochée
 // (seule la case CMU, simple information, n'est pas comptée).
+const REL_T={mail:["✉️","Mail"],tel:["📞","Téléphone"],rdv:["🤝","RDV"]};
+const derniereRel=p=>(p.vie&&p.vie.relances||[]).reduce((m,r)=>(!m||String(r.d)>String(m.d))?r:m,null);
 const verifie=p=>!!(p.dates&&p.dates.verif);
 const todo=p=>(!progress(p).done&&!verifie(p))||ECH.some(([k,,th])=>["vide","bad","warn"].includes(echStatus(p.ech[k],th).k));
 function progress(a){
@@ -565,7 +575,7 @@ function itemListe(p){
     ECH.map(([k,l,th])=>{const s=echStatus(p.ech[k],th);return `<i class="dot st-${s.k}" title="${l} : ${s.t}"></i>`}).join("");
   return `<div class="li-row"><button class="li ${act?"active":""}" data-open="${p.id}" aria-current="${act}">
     <div class="av">${initials(p.nom)}</div>
-    <div class="li-t"><b>${esc(p.nom)}</b><span>${p.embauche?"Embauché(e) le "+fmt(p.embauche):"&nbsp;"}</span>
+    <div class="li-t"><b>${esc(p.nom)}</b><span>${p.embauche?"Embauché(e) le "+fmt(p.embauche):"&nbsp;"}${(()=>{const r=!pr.done&&derniereRel(p);return r?" · relancé(e) le "+fmt(r.d)+" ("+(REL_T[r.t]||REL_T.mail)[1].toLowerCase()+")":""})()}</span>
       <div class="li-m"><span class="dots">${dots}</span><span class="mini"><i style="width:${pr.v/pr.t*100}%"></i></span><small>${pr.v}/${pr.t}</small></div></div></button><button class="li-x li-arch" data-archiver="${p.id}" title="Archiver ${esc(p.nom)} (a quitté AID’Aux)" aria-label="Archiver ${esc(p.nom)}">🗄</button><button class="li-x" data-retirer="${p.id}" title="Supprimer ${esc(p.nom)}" aria-label="Supprimer ${esc(p.nom)}">×</button></div>`;
 }
 function listeHTML(l,vide){
@@ -888,6 +898,7 @@ function fiche(a){
      </div>
      <h4>Digiposte</h4>
      <div class="dates">${DATES.map(([k,l])=>`<label>${l}<input type="date" min="2026-01-01" max="2040-12-31" data-date="${k}" value="${a.dates[k]||""}"></label>`).join("")}</div>
+     ${relancesHTML(a)}
      <div class="verif-box ${verifie(a)?"on":""}">${cb('data-verif',verifie(a),"<b>Dossier vérifié</b> <small>même s’il est incomplet</small>")}
        <span class="verif-info">${verifie(a)?"Vérifié le "+fmt(a.dates.verif)+(a.dates.verif_par?" par "+esc(a.dates.verif_par):""):"À cocher quand le dossier a été contrôlé, même s’il manque des pièces."}</span></div>
      <p class="note">Les cases sont enregistrées dès qu’on les coche. « Vérifié » coche aussi « Présent ».</p>
@@ -896,6 +907,19 @@ function fiche(a){
    ${entSection(a)}
    <div class="sec" style="text-align:right"><button class="ghost" data-archiver="${a.id}">🗄 Archiver (a quitté AID’Aux)</button> <button class="ghost" data-retirer="${a.id}">Supprimer</button></div>
   </div>`;
+}
+function relancesHTML(a){
+  const L=a.vie.relances.map((r,i)=>({r,i})).sort((x,y)=>String(y.r.d).localeCompare(String(x.r.d)));
+  const lignes=L.length?L.map(({r,i})=>{const t=REL_T[r.t]||REL_T.mail;
+    return `<div class="rel-l"><span class="rel-d">${fmt(r.d)}</span><span class="rel-t">${t[0]} ${t[1]}</span><span class="rel-c">${r.auto?"🤖 ":""}${esc(r.c||"")}</span>
+      <button class="x" data-reldel="${i}" title="Supprimer cette relance" aria-label="Supprimer cette relance">×</button></div>`}).join("")
+    :`<p class="v-empty">Aucune relance notée pour l’instant.</p>`;
+  return `<h4>Suivi des relances <small>${L.length?L.length+" relance"+(L.length>1?"s":""):"dossier incomplet : notez ici chaque relance"}</small></h4>
+   <div class="rel-list">${lignes}</div>
+   <div class="rel-add"><label>Date<input type="date" min="2026-01-01" max="2040-12-31" id="relDate" value="${iso(new Date())}"></label>
+     <label>Type<select id="relType">${Object.entries(REL_T).map(([k,t])=>`<option value="${k}">${t[0]} ${t[1]}</option>`).join("")}</select></label>
+     <label class="rel-grow">Commentaire <small>(facultatif)</small><input id="relCom" placeholder="Ex. : manque RIB et carte vitale" autocomplete="off"></label>
+     <button class="btn teal" data-reladd>Noter la relance</button></div>`;
 }
 function editor(p,k){
   const e=p.ech[k],l=ECH.find(x=>x[0]===k)[1];
@@ -1055,6 +1079,12 @@ document.addEventListener("click",async ev=>{
   if(t.dataset.acc){UI.acc[t.dataset.acc]=!UI.acc[t.dataset.acc];return render()}
   if(t.dataset.ed&&!t.dataset.ed.endsWith("|piece")){const k=t.dataset.ed.split("|")[1];UI.acc.vie=true;UI.editor=null;render();
     const el=document.getElementById("vie-"+k);if(el){el.scrollIntoView({behavior:"smooth",block:"center"});el.classList.add("flash");setTimeout(()=>el.classList.remove("flash"),1200)}return}
+  if(a&&t.hasAttribute("data-reladd")){
+    const d=document.getElementById("relDate").value;if(!d)return toast("Choisissez la date de la relance");
+    const ty=document.getElementById("relType").value,c=document.getElementById("relCom").value.trim();
+    a.vie.relances.push({d,t:ty,c});render();
+    push(a,{txt:"Relance ("+REL_T[ty][1].toLowerCase()+") pour "+a.nom+(c?" : "+c:"")});toast("Relance notée");return}
+  if(a&&t.dataset.reldel!==undefined){if(!confirm("Supprimer cette relance ?"))return;a.vie.relances.splice(+t.dataset.reldel,1);render();push(a);return}
   if(a&&t.dataset.avadd!==undefined){a.vie.avenants.unshift({date:"",c:"",signe:false});render();push(a);return}
   if(a&&t.dataset.avdel!==undefined){const i=+t.dataset.avdel;if(!confirm("Supprimer cet avenant ?"))return;a.vie.avenants.splice(i,1);render();push(a);return}
   if(a&&t.dataset.entnc){const e=a.vie.ent[t.dataset.entnc];e.nc=!e.nc;render();push(a);return}
