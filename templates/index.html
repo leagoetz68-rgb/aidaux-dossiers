@@ -706,9 +706,6 @@ function entDue(a,d){const e=a.vie.ent[d.k];
 }
 function entStatus(a,d){const e=a.vie.ent[d.k],due=entDue(a,d);
   if(e.nc)return{k:"nc",t:"Non concerné",n:"—",u:"non concerné",due};
-  if(e.rdv){const j=days(e.rdv);
-    return j>=0?{k:"rdv",t:"RDV le "+fmt(e.rdv),n:"J-"+j,u:"avant le RDV du "+fmt(e.rdv),due}
-               :{k:"bad",t:"RDV passé – à mettre à jour",n:"+"+(-j)+" j",u:"saisir la date de l’entretien",due}}
   if(d.mois&&e.le)return{k:"ok",t:"Fait le "+fmt(e.le),n:"✓",u:"entretien réalisé",due};
   if(!due)return{k:"vide",t:"Date d’embauche manquante",n:"?",u:"renseigner la date d’embauche",due};
   const j=days(due);
@@ -728,7 +725,6 @@ function carteEnt(a,d){
       <div class="count st-${s.k}"><b>${s.n}</b><small>${s.u}</small></div>
       <div class="v-fields">
         <label>${rec?"Dernier entretien le":"Entretien réalisé le"}<input type="date" min="2015-01-01" max="2040-12-31" data-ent="${d.k}|le" value="${e.le||""}" ${e.nc?"disabled":""}></label>
-        <label>RDV prévu le<span class="rdvrow"><input type="date" min="2026-01-01" max="2040-12-31" data-ent="${d.k}|rdv" value="${e.rdv||""}" ${e.nc?"disabled":""}>${e.rdv?`<button class="x" data-entunrdv="${d.k}" title="Retirer le RDV" aria-label="Retirer le RDV">×</button>`:""}</span></label>
         ${rec&&s.due&&s.k!=="nc"?`<small style="color:var(--ink2)">Prochain entretien : ${fmt(s.due)}</small>`:""}
       </div>
     </div>
