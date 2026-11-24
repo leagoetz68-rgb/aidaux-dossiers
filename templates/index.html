@@ -431,6 +431,18 @@ const AGENCES=["Cronenbourg","Vendenheim","Personnel administratif"];
 const DOCS_OBL=[["piece","Pièce d’identité"],["vitale","Carte vitale"],["dpae","DPAE"],["cpam","Attestation CPAM"],["rib","RIB"],["permis","Permis de conduire"],["grise","Carte grise"],["assurance","Attestation assurance voiture"],["diplomes","Diplômes"],["formations","Attestations de formations"],["employeurs","Attestations employeurs"],["cv","CV / DCC / test"]];
 const DOCS_SIGN=[["contrat","Contrat de travail"],["mutuelle","Mutuelle"]];
 const CLASSEUR=[["duerp","DUERP"],["rqth","RQTH"],["confiance","Personne de confiance"],["digiposte","Consentement Digiposte"],["image","Droit à l’image"],["resto","Carte restaurant"],["reception","Attestation réception et engagement"],["casier","Visibilité du casier n°3"]];
+// Arborescence des dossiers Ximi (GED de chaque salarié). Pour déplacer un document d'un dossier à l'autre,
+// il suffit de changer sa clé de liste : docs = lignes « Présent / Vérifié », cl = cases du classeur.
+const XIMI=[
+ {n:"01_DOSSIER CANDIDATURE",docs:["cv","diplomes","employeurs"],cl:[]},
+ {n:"02_DOCUMENTS LIES A L’EMBAUCHE",docs:["piece","vitale","cpam","rib","permis","grise","assurance"],cl:["casier"]},
+ {n:"03_EMBAUCHE",docs:["dpae","contrat","mutuelle"],cl:["reception","confiance","digiposte","image","resto","duerp","rqth"]},
+ {n:"04_VIE PROFESSIONNELLE",docs:[],cl:[],vp:true},
+ {n:"05_SUIVI DU PERSONNEL",docs:[],cl:[]},
+ {n:"06_FORMATIONS",docs:["formations"],cl:[]},
+ {n:"07_DISCIPLINE",docs:[],cl:[]},
+ {n:"08_COURRIER(S) DIVERS",docs:[],cl:[]},
+ {n:"09_FIN DE CONTRAT",docs:[],cl:[]}];
 const DATES=[["envoi","Contrat + mutuelle envoyés le"],["ident","Identifiant Digiposte créé le"],["depot","Documents déposés sur Digiposte le"]];
 const PIECE_T={cni:"CNI",titre:"Titre de séjour",passeport:"Passeport"};
 const ECH=[["piece","Pièce d’identité",90],["cpam","Attestation CSS",30],["medecine","Médecine du travail",60],["permis","Permis de conduire",90]];
@@ -700,14 +712,12 @@ function carteAvenants(a){
 function vieScore(a){
   let ok=0,t=0;
   VIE.forEach(([k,,,ek])=>{t++;const th=ECH.find(x=>x[0]===ek)[2],s=echStatus(a.ech[ek],th).k;if(s==="ok"||s==="nc"||s==="warn")ok++});
-  t++;if(!a.vie.avenants.some(avNonSigne))ok++;
   return{ok,t};
 }
 function vieSection(a){
   const sc=vieScore(a);
-  return `${accHead("vie","🌱","La vie du salarié","Avenants, attestation CSS, médecine du travail",`${sc.ok} / ${sc.t}`,sc.ok===sc.t?"ok":"bad")}
+  return `${accHead("vie","🌱","La vie du salarié","Attestation CSS, médecine du travail",`${sc.ok} / ${sc.t}`,sc.ok===sc.t?"ok":"bad")}
    <div class="acc-body" ${UI.acc.vie?"":"hidden"}><div class="vie-grid">
-     ${carteAvenants(a)}
      ${VIE.map(([k,ico,t,ek])=>carteEch(a,k,ico,t,ek)).join("")}
    </div></div>`;
 }
@@ -890,6 +900,20 @@ FMEL.addEventListener("click",ev=>{
   else if(b.dataset.fm==="done")fmDone();
 });
 document.addEventListener("keydown",ev=>{if(ev.key==="Escape"&&!FMEL.hidden)fmClose()});
+function dossiersXimi(a,thead){
+  const LD=Object.fromEntries([...DOCS_OBL,...DOCS_SIGN]),LC=Object.fromEntries(CLASSEUR);
+  return XIMI.map(f=>{
+    if(f.vp){const se=entScore(a),ok=(a.vie.avenants.some(avNonSigne)?0:1)+se.ok,tt=1+se.t;
+      return `<h4>📁 ${f.n} <small>avenants et entretiens · ${ok} / ${tt}</small></h4>
+      <div class="dates" style="margin-bottom:10px;align-items:flex-end"><label>Date d’embauche <small>(sert à calculer les échéances des suivis 1, 3 et 6 mois)</small><input type="date" min="2000-01-01" max="2040-12-31" data-embauche value="${a.embauche||""}"></label></div>
+      <div class="vie-grid">${carteAvenants(a)}${ENT.map(d=>carteEnt(a,d)).join("")}</div>`}
+    const t=f.docs.length+f.cl.length;
+    if(!t)return `<h4 style="opacity:.6">📁 ${f.n} <small>rien à suivre pour l’instant</small></h4>`;
+    const v=f.docs.filter(k=>["verifie","nc"].includes(a.docs[k].s)).length+f.cl.filter(k=>a.classeur[k]).length;
+    const cl=f.cl.length?`<div class="trow ${f.cl.every(k=>a.classeur[k])?"is-ok":""}"><div class="t-doc">Classeur <small>(${f.cl.filter(k=>a.classeur[k]).length}/${f.cl.length})</small></div>
+      <div class="t-wide"><div class="cl-list">${f.cl.map(k=>cb(`data-cl="${k}"`,!!a.classeur[k],LC[k])).join("")}</div></div></div>`:"";
+    return `<h4>📁 ${f.n} <small>${v} / ${t}</small></h4>
+      <div class="table">${f.docs.length?thead:""}${f.docs.map(k=>ligneDoc(a,k,LD[k])).join("")}${cl}</div>`}).join("")}
 function fiche(a){
   const p=progress(a);
   const nCl=CLASSEUR.filter(([k])=>a.classeur[k]).length;
@@ -903,17 +927,11 @@ function fiche(a){
 
    <div class="sec"><h3>Échéances</h3><div class="pills">${pills}</div>${UI.editor&&UI.editor.id===a.id?editor(a,UI.editor.k):""}</div>
 
-   ${accHead("admin","🗂️","Dossier administratif obligatoire","Pièces, signatures, classeur et Digiposte",`${p.v} / ${p.t}${p.v!==p.t&&verifie(a)?" · vérifié":""}`,p.v===p.t?"ok":verifie(a)?"warn":"bad")}
+   ${accHead("admin","🗂️","Dossier administratif obligatoire","Dossiers Ximi (dont avenants et entretiens) et Digiposte",`${p.v} / ${p.t}${p.v!==p.t&&verifie(a)?" · vérifié":""}`,p.v===p.t?"ok":verifie(a)?"warn":"bad")}
    <div class="acc-body" ${UI.acc.admin?"":"hidden"}><div class="sec dossier">
      <div class="dates" style="margin-bottom:6px"><label>Date du dossier<input type="date" min="2000-01-01" max="2040-12-31" data-date="dossier" value="${a.dates.dossier||""}"></label><label>Email du salarié <small>(relances titre de séjour &amp; CSS)</small><input type="email" data-email value="${esc(a.email||"")}" placeholder="prenom.nom@exemple.fr" autocomplete="off"></label></div>
-     <h4>Documents obligatoires <small>présents dans le dossier</small></h4>
-     <div class="table">${thead}${DOCS_OBL.map(([k,l])=>ligneDoc(a,k,l)).join("")}</div>
-     <h4>Documents à faire signer</h4>
-     <div class="table">${thead}${DOCS_SIGN.map(([k,l])=>ligneDoc(a,k,l)).join("")}
-       <div class="trow ${nCl===CLASSEUR.length?"is-ok":""}"><div class="t-doc">Classeur complet <small>(${nCl}/${CLASSEUR.length})</small></div>
-         <div class="t-wide"><div class="cl-list">${CLASSEUR.map(([k,l])=>cb(`data-cl="${k}"`,!!a.classeur[k],l)).join("")}</div></div></div>
-     </div>
-     <h4>Digiposte</h4>
+     ${dossiersXimi(a,thead)}
+      <h4>Digiposte</h4>
      <div class="dates">${DATES.map(([k,l])=>`<label>${l}<input type="date" min="2000-01-01" max="2040-12-31" data-date="${k}" value="${a.dates[k]||""}"></label>`).join("")}</div>
      ${relancesHTML(a)}
      <div class="verif-box ${verifie(a)?"on":""}">${cb('data-verif',verifie(a),"<b>Dossier vérifié</b> <small>même s’il est incomplet</small>")}
@@ -921,7 +939,7 @@ function fiche(a){
      <p class="note">Les cases sont enregistrées dès qu’on les coche. « Vérifié » coche aussi « Présent ».</p>
    </div></div>
    ${vieSection(a)}
-   ${entSection(a)}
+   
    <div class="sec" style="text-align:right"><button class="ghost" data-archiver="${a.id}">🗄 Archiver (a quitté AID’Aux)</button> <button class="ghost" data-retirer="${a.id}">Supprimer</button></div>
   </div>`;
 }
