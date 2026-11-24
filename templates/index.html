@@ -443,11 +443,15 @@ let UI={acc:{admin:false,vie:false,ent:false},tab:"poste",agence:"Toutes",open:n
 
 function norm(p){
   p.docs=p.docs||{};[...DOCS_OBL,...DOCS_SIGN].forEach(([k])=>{if(!p.docs[k])p.docs[k]={s:"manquant",c:""}});
+  NO_NC.forEach(k=>{if(p.docs[k].s==="nc")p.docs[k].s="manquant"}); // N/C impossible pour ces documents
   if(!p.docs.piece.t)p.docs.piece.t="cni";
   if(!p.docs.piece.types){p.docs.piece.types={};if(p.docs.piece.s==="recu"||p.docs.piece.s==="verifie")p.docs.piece.types[p.docs.piece.t]=true}
   p.classeur=p.classeur||{};CLASSEUR.forEach(([k])=>{p.classeur[k]=!!p.classeur[k]});
   p.dates=p.dates||{};DATES.forEach(([k])=>{p.dates[k]=p.dates[k]||""});
   p.ech=p.ech||{};ECH.forEach(([k])=>{p.ech[k]=p.ech[k]||{date:"",rdv:"",nc:k==="permis"&&!!(p.docs.permis&&p.docs.permis.s==="nc")}});
+  // Permis de conduire : « non concerné » vaut pour la ligne du dossier ET pour l'échéance
+  if(p.ech.permis.nc&&p.docs.permis.s!=="nc")p.docs.permis.s="nc";
+  else if(p.docs.permis.s==="nc")p.ech.permis.nc=true;
   p.vie=p.vie||{};p.vie.avenants=Array.isArray(p.vie.avenants)?p.vie.avenants:[];p.vie.relances=Array.isArray(p.vie.relances)?p.vie.relances:[];
   VIE.forEach(([k])=>{p.vie[k]=p.vie[k]||{fait:false,c:""}});
   p.vie.ent=p.vie.ent||{};ENT.forEach(d=>{p.vie.ent[d.k]=Object.assign({le:"",rdv:"",c:"",nc:false},p.vie.ent[d.k])});
@@ -607,21 +611,27 @@ function viewSplit(){
 }
 const cb=(attr,checked,label,dis)=>`<label class="cbx"><input type="checkbox" ${attr} ${checked?"checked":""} ${dis?"disabled":""}><span class="box" aria-hidden="true"></span>${label?`<span>${label}</span>`:""}</label>`;
 const present=d=>d.s==="recu"||d.s==="verifie";
+const NO_NC=["piece","vitale","cpam"]; // pas de « non concerné » : CNI / titre de séjour, carte vitale, attestation CPAM
+// Pièce d'identité valable : CNI seule, OU titre de séjour avec passeport (ou passeport « non concerné », ex. réfugiés)
+function pieceStatut(d){const ty=d.types||{};const ok=ty.cni||(ty.titre&&(ty.passeport||d.pnc));
+  d.s=ok?(d.s==="verifie"?"verifie":"recu"):"manquant"}
 function ligneDoc(a,k,lab){
-  const d=a.docs[k],nc=d.s==="nc";
+  const d=a.docs[k],sansNc=NO_NC.includes(k),nc=!sansNc&&d.s==="nc";
   let pres;
   if(k==="piece"){
     const ty=d.types||{};
     // CNI cochée → passeport et titre masqués ; passeport ou titre cochés → CNI masquée
-    const visibles=Object.entries(PIECE_T).filter(([v])=>ty.cni?v==="cni":(ty.passeport||ty.titre)?v!=="cni":true);
-    pres=`<div class="ptypes">${visibles.map(([v,t])=>cb(`data-ptyp="${v}" aria-label="${t}"`,!!ty[v],t,nc)).join("")}</div>`;
+    const visibles=Object.entries(PIECE_T).filter(([v])=>ty.cni?v==="cni":(ty.passeport||ty.titre||d.pnc)?v!=="cni":true);
+    pres=`<div class="ptypes">${visibles.map(([v,t])=>v==="passeport"
+      ?`<span style="display:inline-flex;align-items:center;gap:8px">${cb(`data-ptyp="${v}" aria-label="${t}"`,!!ty[v]&&!d.pnc,t,nc||d.pnc)}<button class="nc" data-ncpass aria-pressed="${!!d.pnc}" title="Passeport non concerné (ex. réfugié)" aria-label="Passeport non concerné">N/C</button></span>`
+      :cb(`data-ptyp="${v}" aria-label="${t}"`,!!ty[v],t,nc)).join("")}</div>`;
   } else pres=cb(`data-pres="${k}" aria-label="${lab} présent dans le dossier"`,present(d),"",nc);
   return `<div class="trow ${nc?"is-nc":""} ${d.s==="verifie"?"is-ok":""}">
     <div class="t-doc">${lab}</div>
     <div class="t-pres">${pres}</div>
     <div class="t-com"><input class="com" data-com="${k}" value="${esc(d.c)}" placeholder="Commentaire" aria-label="Commentaire ${lab}"></div>
     <div class="t-ver">${cb(`data-ver="${k}" aria-label="${lab} vérifié"`,d.s==="verifie","",nc)}</div>
-    <div class="t-nc"><button class="nc" data-nc="${k}" aria-pressed="${nc}" title="Non concerné">N/C</button></div>
+    <div class="t-nc">${sansNc?"":`<button class="nc" data-nc="${k}" aria-pressed="${nc}" title="Non concerné">N/C</button>`}</div>
   </div>`;
 }
 
@@ -1076,7 +1086,11 @@ document.addEventListener("click",async ev=>{
     catch(e){toast("Impossible de supprimer : "+e.message)}
     return;
   }
-  if(t.dataset.nc&&a){const d=a.docs[t.dataset.nc];d.s=d.s==="nc"?"manquant":"nc";render();if(!checkDone(a))push(a);return}
+  if(a&&t.hasAttribute("data-ncpass")){const d=a.docs.piece;d.types=d.types||{};d.pnc=!d.pnc;
+    if(d.pnc){d.types.passeport=false;d.types.cni=false}
+    pieceStatut(d);render();if(!checkDone(a))push(a);return}
+  if(t.dataset.nc&&a&&!NO_NC.includes(t.dataset.nc)){const d=a.docs[t.dataset.nc];d.s=d.s==="nc"?"manquant":"nc";
+    if(t.dataset.nc==="permis")a.ech.permis.nc=d.s==="nc";render();if(!checkDone(a))push(a);return}
   if(t.dataset.only){UI.onlyTodo=t.dataset.only==="1";return render()}
   if(t.dataset.acc){UI.acc[t.dataset.acc]=!UI.acc[t.dataset.acc];return render()}
   if(t.dataset.ed&&!/\|(piece|permis)$/.test(t.dataset.ed)){const k=t.dataset.ed.split("|")[1];UI.acc.vie=true;UI.editor=null;render();
@@ -1100,7 +1114,8 @@ document.addEventListener("click",async ev=>{
     if(t.hasAttribute("data-rdv")){const v=document.getElementById("edRdv").value;if(!v)return toast("Choisissez la date du RDV");e.rdv=v;news={txt:"RDV "+l.toLowerCase()+" pour "+p.nom+" le "+fmt(v),c:"coral"};toast("RDV noté")}
     if(t.hasAttribute("data-unrdv")){e.rdv=""}
     if(t.hasAttribute("data-ncech")){e.nc=!e.nc}
-    UI.editor=null;render();push(p,news);return;
+    if(k==="permis"){const dp=p.docs.permis;if(e.nc)dp.s="nc";else if(dp.s==="nc")dp.s="manquant"}
+    UI.editor=null;render();if(!checkDone(p))push(p,news);return;
   }
 });
 /* Dates : quand on tape une date au clavier, le navigateur signale un changement
@@ -1148,13 +1163,11 @@ document.addEventListener("change",ev=>{
   let coche=false;
   if(t.dataset.pres){const d=a.docs[t.dataset.pres];d.s=t.checked?(d.s==="verifie"?"verifie":"recu"):"manquant";coche=true}
   if(t.dataset.ver){const d=a.docs[t.dataset.ver];d.s=t.checked?"verifie":(d.s==="verifie"?"recu":d.s);
-    if(t.dataset.ver==="piece"&&t.checked&&!Object.values(d.types||{}).some(Boolean)){d.types={...(d.types||{}),[d.t||"cni"]:true}}coche=true}
+    if(t.dataset.ver==="piece"&&t.checked&&!d.pnc&&!Object.values(d.types||{}).some(Boolean)){d.types={...(d.types||{}),[d.t||"cni"]:true}}coche=true}
   if(t.dataset.ptyp){const d=a.docs.piece;d.types=d.types||{};d.types[t.dataset.ptyp]=t.checked;
-    if(t.checked){if(t.dataset.ptyp==="cni"){d.types.passeport=false;d.types.titre=false}else d.types.cni=false}
+    if(t.checked){if(t.dataset.ptyp==="cni"){d.types.passeport=false;d.types.titre=false;d.pnc=false}else d.types.cni=false}
     const un=Object.keys(PIECE_T).find(x=>d.types[x]);if(un)d.t=un;
-    // Pièce valable : CNI seule, OU passeport + titre de séjour ensemble
-    const ok=d.types.cni||(d.types.passeport&&d.types.titre);
-    d.s=ok?(d.s==="verifie"?"verifie":"recu"):"manquant";coche=true}
+    pieceStatut(d);coche=true}
   if(t.dataset.cl){a.classeur[t.dataset.cl]=t.checked;coche=true}
   if(coche){render();if(!checkDone(a))push(a)}
 });
