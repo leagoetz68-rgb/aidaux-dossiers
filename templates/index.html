@@ -433,7 +433,7 @@ const DOCS_SIGN=[["contrat","Contrat de travail"],["mutuelle","Mutuelle"]];
 const CLASSEUR=[["duerp","DUERP"],["rqth","RQTH"],["confiance","Personne de confiance"],["digiposte","Consentement Digiposte"],["image","Droit à l’image"],["resto","Carte restaurant"],["reception","Attestation réception et engagement"],["casier","Visibilité du casier n°3"]];
 const DATES=[["envoi","Contrat + mutuelle envoyés le"],["ident","Identifiant Digiposte créé le"],["depot","Documents déposés sur Digiposte le"]];
 const PIECE_T={cni:"CNI",titre:"Titre de séjour",passeport:"Passeport"};
-const ECH=[["piece","Pièce d’identité",90],["cpam","Attestation CSS",30],["medecine","Médecine du travail",60],["entretien","Entretien individuel",60],["permis","Permis de conduire",90]];
+const ECH=[["piece","Pièce d’identité",90],["cpam","Attestation CSS",30],["medecine","Médecine du travail",60],["permis","Permis de conduire",90]];
 const STATUS_NEXT={manquant:"recu",recu:"verifie",verifie:"manquant"};
 const STATUS_LAB={manquant:"Manquant",recu:"Reçu",verifie:"Vérifié",nc:"Non concerné"};
 const labelOf=k=>([...DOCS_OBL,...DOCS_SIGN].find(x=>x[0]===k)||[,k])[1];
@@ -510,7 +510,7 @@ function renderHero(){
   const tot=S.arrivees.length+S.poste.length,ok=S.poste.filter(x=>!todo(x)).length;
   const pct=tot?Math.round(ok/tot*100):100;
   const aT=S.poste.filter(todo).length+S.arrivees.length;
-  let rdv=0;S.poste.forEach(p=>ECH.forEach(([k])=>{const e=p.ech[k];if(e.rdv&&days(e.rdv)>=0)rdv++}));
+  let rdv=0;S.poste.forEach(p=>{ECH.forEach(([k])=>{const e=p.ech[k];if(e.rdv&&days(e.rdv)>=0)rdv++});ENT.forEach(d=>{const e=p.vie.ent[d.k];if(e&&e.rdv&&!e.nc&&days(e.rdv)>=0)rdv++})});
   document.getElementById("hero").innerHTML=
    `<div class="gauge total">${ring(pct,"var(--teal)",true)}<div><h3>Toute l’équipe</h3><p>${ok} dossier${ok>1?"s":""} sur ${tot} à jour${pct===100?", bravo":""}</p></div></div>
     <div class="gauge"><div class="bignum" style="color:#FF8A6B">${aT}</div><div><h3>À traiter</h3><p>Échéances proches, expirées ou à renseigner, et dossiers incomplets</p></div></div>
@@ -626,7 +626,7 @@ function ligneDoc(a,k,lab){
 }
 
 // ---- « La vie du salarié » ----
-const VIE=[["css","🧾","Attestation CSS","cpam"],["medecine","🩺","Visite médecine du travail","medecine"],["entretien","💬","Entretien annuel","entretien"]];
+const VIE=[["css","🧾","Attestation CSS","cpam"],["medecine","🩺","Visite médecine du travail","medecine"]];
 VIE.forEach(v=>{v[2]=v[2]}); // libellés
 function accHead(k,ico,titre,sous,badge,st){
   const op=!!UI.acc[k];
@@ -690,7 +690,7 @@ function vieScore(a){
 }
 function vieSection(a){
   const sc=vieScore(a);
-  return `${accHead("vie","🌱","La vie du salarié","Avenants, attestation CSS, médecine du travail, entretiens",`${sc.ok} / ${sc.t}`,sc.ok===sc.t?"ok":"bad")}
+  return `${accHead("vie","🌱","La vie du salarié","Avenants, attestation CSS, médecine du travail",`${sc.ok} / ${sc.t}`,sc.ok===sc.t?"ok":"bad")}
    <div class="acc-body" ${UI.acc.vie?"":"hidden"}><div class="vie-grid">
      ${carteAvenants(a)}
      ${VIE.map(([k,ico,t,ek])=>carteEch(a,k,ico,t,ek)).join("")}
@@ -1130,7 +1130,7 @@ document.addEventListener("change",ev=>{
     render();push(a,news);return}
   if(t.dataset.vief){const k=t.dataset.vief,v=a.vie[k];v.fait=t.checked;v.le=t.checked?new Date().toISOString().slice(0,10):"";
     let news=null;
-    if(t.checked&&(k==="medecine"||k==="entretien")){a.ech[k].rdv="";const l=VIE.find(x=>x[0]===k)[2];news={txt:l+" faite pour "+a.nom};toast("Bravo 🎉 Pensez à noter la prochaine échéance");}
+    if(t.checked&&k==="medecine"){a.ech[k].rdv="";const l=VIE.find(x=>x[0]===k)[2];news={txt:l+" faite pour "+a.nom};toast("Bravo 🎉 Pensez à noter la prochaine échéance");}
     render();push(a,news);return}
   if(t.dataset.echd){const [k,f]=t.dataset.echd.split("|"),e=a.ech[k];e[f]=t.value;if(f==="date"&&t.value){e.nc=false;if(a.vie[k])a.vie[k].fait=false}
     let news=null;const l=ECH.find(x=>x[0]===k)[1];
