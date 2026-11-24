@@ -509,10 +509,10 @@ const REL_T={mail:["✉️","Mail"],tel:["📞","Téléphone"],rdv:["🤝","RDV"
 const derniereRel=p=>(p.vie&&p.vie.relances||[]).reduce((m,r)=>(!m||String(r.d)>String(m.d))?r:m,null);
 const verifie=p=>!!(p.dates&&p.dates.verif);
 // Permis de conduire : le mot « nouveau » ou « ancien » dans le commentaire de la ligne du dossier décide.
-//  nouveau → date de validité à renseigner ; ancien → validé d’office ; N/C ou rien d’écrit → échéance masquée
+//  nouveau (ou rien d’écrit) → date de validité à renseigner ; ancien → validé d’office ; N/C → échéance masquée
 const permisMode=p=>{if((p.docs.permis&&p.docs.permis.s==="nc")||(p.ech.permis&&p.ech.permis.nc))return"nc";
   const c=String((p.docs.permis||{}).c||"").toLowerCase();return /nouveau/.test(c)?"nouveau":/ancien/.test(c)?"ancien":"aucun"};
-const echListe=p=>ECH.filter(([k])=>k!=="permis"||["nouveau","ancien"].includes(permisMode(p)));
+const echListe=p=>ECH.filter(([k])=>k!=="permis"||permisMode(p)!=="nc");
 const echSt=(p,k,th)=>k==="permis"&&permisMode(p)==="ancien"?{k:"ok",t:"Ancien permis",s:"sans date de validité"}:echStatus(p.ech[k],th);
 const todo=p=>(!progress(p).done&&!verifie(p))||echListe(p).some(([k,,th])=>["vide","bad","warn"].includes(echSt(p,k,th).k));
 function progress(a){
