@@ -626,13 +626,18 @@ function ligneDoc(a,k,lab){
       ?`<span style="display:inline-flex;align-items:center;gap:8px">${cb(`data-ptyp="${v}" aria-label="${t}"`,!!ty[v]&&!d.pnc,t,nc||d.pnc)}<button class="nc" data-ncpass aria-pressed="${!!d.pnc}" title="Passeport non concerné (ex. réfugié)" aria-label="Passeport non concerné">N/C</button></span>`
       :cb(`data-ptyp="${v}" aria-label="${t}"`,!!ty[v],t,nc)).join("")}</div>`;
   } else pres=cb(`data-pres="${k}" aria-label="${lab} présent dans le dossier"`,present(d),"",nc);
+  const saisine=k==="piece"&&((d.types||{}).titre||d.saisine)
+    ?`<div class="saisine" style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:8px 14px 10px;border-top:1px dashed var(--line);font-size:13px;color:var(--ink2)">
+      <span><b style="color:var(--ink)">Saisine</b> <small>(vérification préalable à l’embauche du titre de séjour)</small></span>
+      <label style="display:flex;align-items:center;gap:6px">Demande faite le <input type="date" min="2000-01-01" max="2040-12-31" data-saisine value="${d.saisine||""}" aria-label="Date de la saisine" style="border:1px solid var(--line);border-radius:10px;padding:6px 9px;background:var(--bg);color:var(--ink)"></label>
+      <button class="nc" data-saisine-today>Aujourd’hui</button></div>`:"";
   return `<div class="trow ${nc?"is-nc":""} ${d.s==="verifie"?"is-ok":""}">
     <div class="t-doc">${lab}</div>
     <div class="t-pres">${pres}</div>
     <div class="t-com"><input class="com" data-com="${k}" value="${esc(d.c)}" placeholder="Commentaire" aria-label="Commentaire ${lab}"></div>
     <div class="t-ver">${cb(`data-ver="${k}" aria-label="${lab} vérifié"`,d.s==="verifie","",nc)}</div>
     <div class="t-nc">${sansNc?"":`<button class="nc" data-nc="${k}" aria-pressed="${nc}" title="Non concerné">N/C</button>`}</div>
-  </div>`;
+  </div>${saisine}`;
 }
 
 // ---- « La vie du salarié » ----
@@ -1086,6 +1091,7 @@ document.addEventListener("click",async ev=>{
     catch(e){toast("Impossible de supprimer : "+e.message)}
     return;
   }
+  if(a&&t.hasAttribute("data-saisine-today")){a.docs.piece.saisine=iso(new Date());render();push(a);toast("Saisine notée à la date du jour");return}
   if(a&&t.hasAttribute("data-ncpass")){const d=a.docs.piece;d.types=d.types||{};d.pnc=!d.pnc;
     if(d.pnc){d.types.passeport=false;d.types.cni=false}
     pieceStatut(d);render();if(!checkDone(a))push(a);return}
@@ -1153,6 +1159,7 @@ document.addEventListener("change",ev=>{
     render();push(a,news);return}
   if(t.dataset.av){const [i,f]=t.dataset.av.split("|"),av=a.vie.avenants[+i];if(!av)return;av[f]=f==="signe"?t.checked:t.value;render();push(a);return}
   if(t.hasAttribute("data-embauche")){a.embauche=t.value;render();push(a);toast(t.value?"Date d’embauche enregistrée":"Date d’embauche retirée");return}
+  if(t.hasAttribute("data-saisine")){a.docs.piece.saisine=t.value;render();push(a);toast(t.value?"Date de saisine enregistrée":"Date de saisine retirée");return}
   if(t.hasAttribute("data-email")){a.email=t.value.trim();push(a);toast("Email enregistré");return}
   if(t.hasAttribute("data-verif")){
     if(t.checked){a.dates.verif=iso(new Date());a.dates.verif_par=document.body.dataset.user||""}
