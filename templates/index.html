@@ -428,14 +428,14 @@ const initials=n=>n.trim().split(/\s+/).map(x=>x[0]).slice(0,2).join("").toUpper
 const first=n=>n.trim().split(/\s+/).slice(-1)[0];
 
 const AGENCES=["Cronenbourg","Vendenheim","Personnel administratif"];
-const DOCS_OBL=[["piece","Pièce d’identité"],["vitale","Carte vitale"],["dpae","DPAE"],["cpam","Attestation CPAM"],["rib","RIB"],["permis","Permis de conduire"],["grise","Carte grise"],["assurance","Attestation assurance voiture"],["diplomes","Diplômes"],["formations","Attestations de formations"],["employeurs","Attestations employeurs"],["cv","CV / DCC / test"]];
+const DOCS_OBL=[["piece","Pièce d’identité"],["vitale","Carte vitale"],["dpae","DPAE"],["cpam","Attestation CSS"],["rib","RIB"],["permis","Permis de conduire"],["grise","Carte grise"],["assurance","Attestation assurance voiture"],["diplomes","Diplômes"],["formations","Attestations de formations"],["employeurs","Attestations employeurs"],["cv","CV / DCC / test"]];
 const DOCS_SIGN=[["contrat","Contrat de travail"],["mutuelle","Mutuelle"]];
 const CLASSEUR=[["duerp","DUERP"],["rqth","RQTH"],["confiance","Personne de confiance"],["digiposte","Consentement Digiposte"],["image","Droit à l’image"],["resto","Carte restaurant"],["reception","Attestation réception et engagement"],["casier","Visibilité du casier n°3"]];
 // Arborescence des dossiers Ximi (GED de chaque salarié). Pour déplacer un document d'un dossier à l'autre,
 // il suffit de changer sa clé de liste : docs = lignes « Présent / Vérifié », cl = cases du classeur.
 const XIMI=[
- {n:"01_DOSSIER CANDIDATURE",docs:["cv","diplomes","employeurs"],cl:[]},
- {n:"02_DOCUMENTS LIES A L’EMBAUCHE",docs:["piece","vitale","cpam","rib","permis","grise","assurance"],cl:["casier"]},
+ {n:"01_DOSSIER CANDIDATURE",docs:["cv"],cl:[]},
+ {n:"02_DOCUMENTS LIES A L’EMBAUCHE",docs:["piece","vitale","cpam","rib","permis","grise","assurance","diplomes","employeurs"],cl:["casier"]},
  {n:"03_EMBAUCHE",docs:["dpae","contrat","mutuelle"],cl:["reception","confiance","digiposte","image","resto","duerp","rqth"]},
  {n:"04_VIE PROFESSIONNELLE",docs:[],cl:[],vp:true},
  {n:"05_SUIVI DU PERSONNEL",docs:[],cl:[]},
