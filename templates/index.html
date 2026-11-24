@@ -902,7 +902,7 @@ FMEL.addEventListener("click",ev=>{
 document.addEventListener("keydown",ev=>{if(ev.key==="Escape"&&!FMEL.hidden)fmClose()});
 function dossiersXimi(a,thead){
   const LD=Object.fromEntries([...DOCS_OBL,...DOCS_SIGN]),LC=Object.fromEntries(CLASSEUR);
-  return XIMI.map(f=>{
+  return XIMI.filter(f=>f.vp||f.docs.length+f.cl.length).map(f=>{ // les dossiers vides ne s’affichent pas
     if(f.vp){const se=entScore(a),ok=(a.vie.avenants.some(avNonSigne)?0:1)+se.ok,tt=1+se.t;
       return `<h4>📁 ${f.n} <small>avenants et entretiens · ${ok} / ${tt}</small></h4>
       <div class="dates" style="margin-bottom:10px;align-items:flex-end"><label>Date d’embauche <small>(sert à calculer les échéances des suivis 1, 3 et 6 mois)</small><input type="date" min="2000-01-01" max="2040-12-31" data-embauche value="${a.embauche||""}"></label></div>
