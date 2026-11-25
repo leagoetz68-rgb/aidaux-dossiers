@@ -200,7 +200,7 @@ a.btn{text-decoration:none;display:inline-block}
 .dossier h4{font-size:14px;margin:18px 0 6px;color:var(--ink);font-family:Nunito,sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.02em}
 .dossier h4 small{text-transform:none;font-weight:400;color:var(--ink2);letter-spacing:0}
 .table{border:1px solid var(--line);border-radius:12px;overflow:hidden}
-.trow{display:grid;grid-template-columns:minmax(150px,1.1fr) minmax(70px,auto) minmax(140px,1.6fr) 62px 52px;gap:10px;align-items:center;padding:7px 10px;border-top:1px solid var(--line)}
+.trow{display:grid;grid-template-columns:minmax(150px,1.1fr) minmax(70px,auto) minmax(140px,1.6fr) 52px;gap:10px;align-items:center;padding:7px 10px;border-top:1px solid var(--line)}
 .trow:first-child{border-top:none}
 .trow.thead{background:var(--bg);font-size:11.5px;font-weight:700;text-transform:uppercase;color:var(--ink2);padding:6px 10px}
 .trow.thead .t-ver{color:var(--coral)}
@@ -227,7 +227,7 @@ a.btn{text-decoration:none;display:inline-block}
   .col-list{position:static;max-height:none}
   .split.has-open .col-list{display:none}
   .back-m{display:inline-block}
-  .trow{grid-template-columns:1fr auto auto;grid-template-areas:"doc pres ver" "com com nc"}
+  .trow{grid-template-columns:1fr auto;grid-template-areas:"doc pres" "com nc"}
   .t-doc{grid-area:doc}.t-pres{grid-area:pres}.t-ver{grid-area:ver}.t-com{grid-area:com}.t-nc{grid-area:nc}
   .trow.thead{display:none}
   .t-wide{grid-column:1 / -1}
@@ -460,6 +460,7 @@ let UI={acc:{admin:false,vie:false,ent:false},tab:"poste",agence:"Toutes",cat:"t
 
 function norm(p){
   p.docs=p.docs||{};[...DOCS_OBL,...DOCS_SIGN].forEach(([k])=>{if(!p.docs[k])p.docs[k]={s:"manquant",c:""}});
+  [...DOCS_OBL,...DOCS_SIGN].forEach(([k])=>{if(p.docs[k].s==="recu")p.docs[k].s="verifie"}); // « présent » suffit
   NO_NC.forEach(k=>{if(p.docs[k].s==="nc")p.docs[k].s="manquant"}); // N/C impossible pour ces documents
   if(!p.docs.piece.t)p.docs.piece.t="cni";
   if(!p.docs.piece.types){p.docs.piece.types={};if(p.docs.piece.s==="recu"||p.docs.piece.s==="verifie")p.docs.piece.types[p.docs.piece.t]=true}
@@ -658,7 +659,7 @@ const present=d=>d.s==="recu"||d.s==="verifie";
 const NO_NC=["piece","vitale","cpam"]; // pas de « non concerné » : CNI / titre de séjour, carte vitale, attestation CPAM
 // Pièce d'identité valable : CNI seule, OU titre de séjour avec passeport (ou passeport « non concerné », ex. réfugiés)
 function pieceStatut(d){const ty=d.types||{};const ok=ty.cni||(ty.titre&&(ty.passeport||d.pnc));
-  d.s=ok?(d.s==="verifie"?"verifie":"recu"):"manquant"}
+  d.s=ok?"verifie":"manquant"}
 function ligneDoc(a,k,lab){
   const d=a.docs[k],sansNc=NO_NC.includes(k),nc=!sansNc&&d.s==="nc";
   let pres;
@@ -679,7 +680,6 @@ function ligneDoc(a,k,lab){
     <div class="t-doc">${lab}</div>
     <div class="t-pres">${pres}</div>
     <div class="t-com"><input class="com" data-com="${k}" value="${esc(d.c)}" placeholder="Commentaire" aria-label="Commentaire ${lab}"></div>
-    <div class="t-ver">${cb(`data-ver="${k}" aria-label="${lab} vérifié"`,d.s==="verifie","",nc)}</div>
     <div class="t-nc">${sansNc?"":`<button class="nc" data-nc="${k}" aria-pressed="${nc}" title="Non concerné">N/C</button>`}</div>
   </div>${saisine}`;
 }
@@ -950,7 +950,7 @@ function fiche(a){
   const p=progress(a);
   const nCl=CLASSEUR.filter(([k])=>a.classeur[k]).length;
   const pills=echListe(a).map(([k,l,th])=>{const s=echSt(a,k,th);const op=UI.editor&&UI.editor.id===a.id&&UI.editor.k===k;return `<button class="pill st-${s.k} ${op?"open":""}" data-ed="${a.id}|${k}" aria-expanded="${op}">${l}<small>${s.t}${s.s?", "+s.s:""}</small></button>`}).join("");
-  const thead=`<div class="trow thead"><div class="t-doc"></div><div class="t-pres">Présent</div><div class="t-com">Commentaires</div><div class="t-ver">Vérifié</div><div class="t-nc"></div></div>`;
+  const thead=`<div class="trow thead"><div class="t-doc"></div><div class="t-pres">Présent</div><div class="t-com">Commentaires</div><div class="t-nc"></div></div>`;
   return `<div class="detail">
    <div class="dhead"><button class="ghost back-m" data-back>← Liste</button><div class="av">${initials(a.nom)}</div>
      <div style="flex:1;min-width:180px"><h2>${esc(a.nom)}</h2><span style="color:var(--ink2);font-size:13px">${a.embauche?"Embauché(e) le "+fmt(a.embauche):""}${a.phase==="arrivee"?" · arrivée en cours":""}</span>
@@ -1222,7 +1222,7 @@ document.addEventListener("change",ev=>{
     toast(t.checked?"Dossier vérifié":"Vérification retirée");return}
   if(t.dataset.date){a.dates[t.dataset.date]=t.value;render();if(!checkDone(a))push(a);return}
   let coche=false;
-  if(t.dataset.pres){const d=a.docs[t.dataset.pres];d.s=t.checked?(d.s==="verifie"?"verifie":"recu"):"manquant";coche=true}
+  if(t.dataset.pres){const d=a.docs[t.dataset.pres];d.s=t.checked?"verifie":"manquant";coche=true}
   if(t.dataset.ver){const d=a.docs[t.dataset.ver];d.s=t.checked?"verifie":(d.s==="verifie"?"recu":d.s);
     if(t.dataset.ver==="piece"&&t.checked&&!d.pnc&&!Object.values(d.types||{}).some(Boolean)){d.types={...(d.types||{}),[d.t||"cni"]:true}}coche=true}
   if(t.dataset.ptyp){const d=a.docs.piece;d.types=d.types||{};d.types[t.dataset.ptyp]=t.checked;
