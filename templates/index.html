@@ -340,6 +340,11 @@ a.btn{text-decoration:none;display:inline-block}
 .pe-page{position:relative;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.15)}
 .pe-page canvas{display:block}
 .pe-layer{position:absolute;inset:0;cursor:text}
+.pe-zone{position:absolute;border:none;padding:0;background:rgba(255,226,92,.28);border-bottom:2px solid rgba(232,170,0,.55);border-radius:3px;cursor:text}
+.pe-zone:hover,.pe-zone:focus-visible{background:rgba(255,226,92,.55);outline:none}
+.pe-case{position:absolute;border:none;padding:0;background:rgba(255,226,92,.35);border-radius:2px;cursor:pointer;color:#0D1A5A;font-weight:900;line-height:1;display:grid;place-items:center}
+.pe-case.on{background:rgba(255,226,92,.15)}
+.pe-case:hover{outline:2px solid rgba(232,170,0,.8)}
 .pe-note{position:absolute;display:flex;align-items:flex-start}
 .pe-grip{position:absolute;left:-16px;top:0;cursor:move;color:#1B2A6B;font-size:14px;line-height:1;padding:2px;touch-action:none;opacity:.55;user-select:none}
 .pe-note:hover .pe-grip,.pe-note:focus-within .pe-grip{opacity:1}
@@ -1332,8 +1337,8 @@ async function pdfOuvrir(pid){
   PE.id=pid;PE.notes=[];PE.pages=[];
   PEL.innerHTML=`<div class="fm-bar"><div class="fm-title"><b>${info?PDF_LIB[info.type]+" "+info.annee:"Entretien"}</b><small>${esc(a?a.nom:"")} · cliquez sur la page pour écrire</small></div>
     <span class="fm-save" id="peSave">Chargement…</span>
-    <button class="btn light" id="peDl">⬇️ Télécharger</button><button class="btn teal" id="peClose">Fermer</button></div>
-    <div class="fm-body" id="peBody"><p class="pe-aide">Cliquez à l’endroit où vous voulez écrire. Faites glisser la poignée ⠿ pour déplacer un texte ; videz-le pour le supprimer.</p><div id="pePages"></div></div>`;
+    <button class="btn light" id="peId">🪪 Remplir l’identité</button><button class="btn light" id="peDl">⬇️ Télécharger</button><button class="btn teal" id="peClose">Fermer</button></div>
+    <div class="fm-body" id="peBody"><p class="pe-aide">Cliquez sur une zone jaune pour répondre (touche <b>Tab</b> : réponse suivante). Vous pouvez aussi cliquer n’importe où sur la page pour écrire. Poignée ⠿ : déplacer un texte ; videz-le pour le supprimer.</p><div id="pePages"></div></div>`;
   PEL.hidden=false;document.body.classList.add("fm-open");
   try{
     const [lib,notes,buf]=await Promise.all([pdfjs(),api("/api/pdf/"+pid+"/notes"),fetch("/api/pdf/"+pid).then(r=>{if(!r.ok)throw new Error("erreur "+r.status);return r.arrayBuffer()})]);
@@ -1357,13 +1362,22 @@ async function peRendre(){
     cv.width=v.width;cv.height=v.height;cv.style.width=larg+"px";cv.style.height=(v0.height*sc)+"px";
     pg.style.width=larg+"px";pg.style.height=(v0.height*sc)+"px";
     await page.render({canvasContext:cv.getContext("2d"),viewport:v}).promise;
+    if(!pg._zones)await peZones(pg,page);
     peCalque(pg);
   }
 }
 function peCalque(pg){
   const L=pg.querySelector(".pe-layer"),p=+pg.dataset.p,W=pg.clientWidth,H=pg.clientHeight;
   L.innerHTML="";
-  PE.notes.forEach((n,i)=>{if(n.p!==p)return;
+  (pg._zones||[]).forEach((z,zi)=>{if(peOccupee(p,z))return;
+    const e=document.createElement("button");e.className="pe-zone";e.dataset.z=zi;e.type="button";e.title="Écrire ici";e.setAttribute("aria-label","Zone de réponse");
+    e.style.left=z.x*W+"px";e.style.top=z.y*H+"px";e.style.width=z.w*W+"px";e.style.height=Math.max(14,0.022*W)+"px";L.appendChild(e)});
+  (pg._cases||[]).forEach((c,ci)=>{const on=peCoche(p,c)>=0;
+    const e=document.createElement("button");e.type="button";e.className="pe-case"+(on?" on":"");e.dataset.c=ci;
+    e.setAttribute("aria-pressed",on);e.setAttribute("aria-label",on?"Décocher":"Cocher");
+    e.style.left=c.x*W+"px";e.style.top=c.y*H+"px";e.style.width=e.style.height=c.s*W+"px";e.style.fontSize=c.s*W+"px";
+    e.textContent=on?"✓":"";L.appendChild(e)});
+  PE.notes.forEach((n,i)=>{if(n.p!==p||n.c)return;
     const d=document.createElement("div");d.className="pe-note";d.dataset.i=i;
     d.style.left=n.x*W+"px";d.style.top=n.y*H+"px";
     d.innerHTML=`<span class="pe-grip" title="Déplacer">⠿</span><textarea rows="1" spellcheck="true"></textarea>`;
@@ -1375,6 +1389,17 @@ function peCalque(pg){
 function peAuto(ta){ta.style.height="auto";ta.style.height=ta.scrollHeight+"px"}
 PEL.addEventListener("input",ev=>{const ta=ev.target;if(ta.tagName!=="TEXTAREA")return;
   const n=PE.notes[+ta.parentNode.dataset.i];if(!n)return;n.t=ta.value;peAuto(ta);peSave()});
+PEL.addEventListener("keydown",ev=>{const ta=ev.target;if(ev.key!=="Tab"||ta.tagName!=="TEXTAREA")return;
+  ev.preventDefault();const n=PE.notes[+ta.parentNode.dataset.i];if(!n)return;
+  // cibles = notes existantes + zones libres, dans l'ordre de lecture
+  const cib=[];PE.notes.forEach((m,i)=>{if(!m.c)cib.push({p:m.p,y:m.y,x:m.x,note:i})});
+  PE.pages.forEach(pg=>(pg._zones||[]).forEach((z,zi)=>{const p=+pg.dataset.p;if(!peOccupee(p,z))cib.push({p,y:z.y,x:z.x,pg,zi})}));
+  const cle=c=>c.p*10+c.y+c.x/1000;cib.sort((a,b)=>ev.shiftKey?cle(b)-cle(a):cle(a)-cle(b));
+  const ici=cle(n),suiv=cib.find(c=>ev.shiftKey?cle(c)<ici-1e-6:cle(c)>ici+1e-6);if(!suiv)return;
+  ta.blur();
+  if(suiv.note!==undefined){const el=PEL.querySelector(`.pe-note[data-i="${PE.notes.indexOf(PE.notes[suiv.note])}"] textarea`);if(el){el.focus();el.scrollIntoView({block:"center",behavior:"smooth"})}}
+  else peEcrireZone(suiv.pg,suiv.zi);
+});
 PEL.addEventListener("focusout",ev=>{const ta=ev.target;if(ta.tagName!=="TEXTAREA")return;
   const i=+ta.parentNode.dataset.i,n=PE.notes[i];
   if(n&&!String(n.t||"").trim()){PE.notes.splice(i,1);peCalque(ta.closest(".pe-page"));peSave()}});
@@ -1384,6 +1409,10 @@ PEL.addEventListener("mouseup",ev=>{const ta=ev.target;if(ta.tagName!=="TEXTAREA
   if(n&&Math.abs((n.w||0.4)-ta.offsetWidth/W)>0.005){n.w=ta.offsetWidth/W;peSave()}});
 PEL.addEventListener("click",ev=>{
   if(ev.target.id==="peClose"){peFermer();return}
+  if(ev.target.id==="peId"){peIdentite();return}
+  const cb=ev.target.closest(".pe-case");if(cb){const pg=cb.closest(".pe-page"),p=+pg.dataset.p,c=pg._cases[+cb.dataset.c],k=peCoche(p,c);
+    if(k>=0)PE.notes.splice(k,1);else PE.notes.push({p,x:c.x,y:c.y,s:c.s,c:1,t:"X"});peCalque(pg);peSave();return}
+  const zb=ev.target.closest(".pe-zone");if(zb){peEcrireZone(zb.closest(".pe-page"),+zb.dataset.z);return}
   if(ev.target.id==="peDl"){peTelecharger();return}
   const L=ev.target.closest(".pe-layer");if(!L||ev.target!==L)return;
   const pg=L.parentNode,r=L.getBoundingClientRect();
@@ -1398,6 +1427,50 @@ PEL.addEventListener("pointermove",ev=>{if(!PE_DRAG)return;const {d,pg,dx,dy}=PE
   d.style.left=Math.max(0,Math.min(pg.clientWidth-20,ev.clientX-dx))+"px";d.style.top=Math.max(0,Math.min(pg.clientHeight-10,ev.clientY-dy))+"px"});
 PEL.addEventListener("pointerup",()=>{if(!PE_DRAG)return;const {d,pg}=PE_DRAG;PE_DRAG=null;
   const n=PE.notes[+d.dataset.i];if(n){n.x=d.offsetLeft/pg.clientWidth;n.y=d.offsetTop/pg.clientHeight;peSave()}});
+// Zones de réponse : lignes de pointillés / soulignés repérées dans le texte du PDF
+async function peZones(pg,page){
+  pg._zones=[];pg._cases=[];
+  try{const v=page.getViewport({scale:1}),tc=await page.getTextContent();
+    const its=[];
+    tc.items.forEach(it=>{if(!it.str||!/^[\s.…_·‥]{6,}$/.test(it.str)||!/[.…_·‥]{6,}|…{3,}/.test(it.str))return;
+      const [x,y]=v.convertToViewportPoint(it.transform[4],it.transform[5]);
+      its.push({x,y,w:it.width*v.scale||it.width})});
+    // fusionne les morceaux sur la même ligne
+    its.sort((a,b)=>a.y-b.y||a.x-b.x);
+    const lignes=[];its.forEach(it=>{const l=lignes[lignes.length-1];
+      if(l&&Math.abs(l.y-it.y)<2&&it.x<=l.x+l.w+8){l.w=Math.max(l.w,it.x+it.w-l.x)}else lignes.push({...it})});
+    // cases à cocher ☐ (□ ❑ ❒ et la case Wingdings des PDF issus de Word)
+    pg._cases=[];
+    tc.items.forEach(it=>{const str=it.str||"";if(!/[☐□❑❒\uf06f\uf0a8\uf071]/.test(str))return;
+      const fs=Math.hypot(it.transform[2],it.transform[3])||10,[x0,y0]=v.convertToViewportPoint(it.transform[4],it.transform[5]);
+      [...str].forEach((c,i,arr)=>{if(!/[☐□❑❒\uf06f\uf0a8\uf071]/.test(c))return;
+        const x=x0+it.width*(i/arr.length);
+        pg._cases.push({x:x/v.width,y:(y0-fs*0.85)/v.height,s:fs*0.95/v.width})})});
+    pg._zones=lignes.filter(l=>l.w>40).map(l=>({x:l.x/v.width,y:(l.y-v.width*0.026)/v.height,w:l.w/v.width}));
+  }catch(e){}
+}
+function peCoche(p,c){return PE.notes.findIndex(n=>n.c&&n.p===p&&Math.abs(n.x-c.x)<0.006&&Math.abs(n.y-c.y)<0.006)}
+function peOccupee(p,z){return PE.notes.some(n=>!n.c&&n.p===p&&Math.abs(n.y-z.y)<0.012&&n.x<z.x+z.w&&n.x+(n.w||0.4)>z.x)}
+function peEcrireZone(pg,zi){const z=pg._zones[zi];if(!z)return;
+  PE.notes.push({p:+pg.dataset.p,x:z.x,y:z.y,w:Math.min(z.w,1-z.x-0.01),fs:0.017,t:""});
+  peCalque(pg);const tas=pg.querySelectorAll(".pe-note textarea"),ta=tas[tas.length-1];ta.focus();ta.scrollIntoView({block:"center",behavior:"smooth"});
+}
+// Remplit le tableau d'identité avec ce que l'appli connaît déjà
+async function peIdentite(){
+  const a=UI.open&&find(UI.open);if(!a||!PE.doc)return;
+  const anc=fmAnc(a.embauche);
+  const val=[[/nom et pr[eé]nom/i,a.nom],[/agence/i,a.agence||""],[/date d.embauche/i,(a.embauche?fmt(a.embauche):"")+(anc?" / "+anc:"")],
+    [/^poste/i,catDe(a)==="administratif"?"Personnel administratif":""]];
+  let n=0;
+  for(const pg of PE.pages){const p=+pg.dataset.p,page=await PE.doc.getPage(p),v=page.getViewport({scale:1}),tc=await page.getTextContent();
+    for(const it of tc.items){const m=val.find(([re,t])=>t&&re.test((it.str||"").trim()));if(!m)continue;
+      const [x,y]=v.convertToViewportPoint(it.transform[4],it.transform[5]);
+      const fin=x+it.width,nx=Math.max(fin+12,v.width*0.5)/v.width+0.006,ny=(y-v.width*0.02)/v.height;
+      if(PE.notes.some(q=>q.p===p&&Math.abs(q.y-ny)<0.008))continue;
+      PE.notes.push({p,x:nx,y:ny,w:Math.min(0.38,0.96-nx),fs:0.015,t:m[1]});m[1]="";n++}
+    peCalque(pg)}
+  if(n){peSave();toast(n+" information(s) remplie(s)")}else toast("Aucune case d’identité trouvée dans ce PDF (ou déjà remplie)");
+}
 async function peFermer(){if(PE.timer)await peFlush();PE.id=null;PE.doc=null;PEL.hidden=true;PEL.innerHTML="";document.body.classList.remove("fm-open")}
 let PE_RS=null;window.addEventListener("resize",()=>{if(!PE.doc)return;clearTimeout(PE_RS);PE_RS=setTimeout(peRendre,250)});
 // Télécharger le PDF avec le texte écrit dessus (pour imprimer, faire signer, archiver)
@@ -1410,7 +1483,9 @@ async function peTelecharger(){
     const propre=t=>String(t).replace(/[’‘]/g,"'").replace(/[“”«»]/g,'"').replace(/[–—]/g,"-").replace(/…/g,"...").replace(/ | /g," ")
       .split("").map(c=>{try{font.encodeText(c);return c}catch(e){return"?"}}).join("");
     const pages=doc.getPages();
-    PE.notes.forEach(n=>{const pg=pages[n.p-1];if(!pg||!String(n.t||"").trim())return;
+    PE.notes.forEach(n=>{const pg=pages[n.p-1];if(!pg||!n.c)return;const {width:W,height:H}=pg.getSize(),sz=n.s*W;
+      pg.drawText("X",{x:n.x*W+sz*0.18,y:H-n.y*H-sz*0.82,size:sz*0.9,font,color:rgb(0.05,0.1,0.35)})});
+    PE.notes.forEach(n=>{const pg=pages[n.p-1];if(!pg||n.c||!String(n.t||"").trim())return;
       const {width:W,height:H}=pg.getSize(),fs=(n.fs||0.017)*W,maxW=(n.w||0.4)*W-6,lh=fs*1.25;
       let y=H-n.y*H-fs-5;const x=n.x*W+4;
       propre(n.t).split("\n").forEach(par=>{let ligne="";
