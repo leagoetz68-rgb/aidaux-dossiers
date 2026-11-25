@@ -381,6 +381,12 @@ a.btn{text-decoration:none;display:inline-block}
 .pe-t{border:1px solid var(--line);background:var(--card);border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:14px;color:var(--ink)}
 .pe-t:hover{background:var(--bg)}
 .pe-t.del:hover{background:#FDE8E8;border-color:var(--bad)}
+.sig{position:relative;border:1px dashed var(--ink2);border-radius:10px;background:#fff}
+.sig-cv{display:block;width:100%;height:auto;aspect-ratio:600/180;touch-action:none;cursor:crosshair;border-radius:10px}
+.sig-ph{position:absolute;left:0;right:0;top:34%;text-align:center;color:var(--ink2);font-size:13px;pointer-events:none}
+.sig-tools{display:flex;gap:6px;padding:6px;border-top:1px dashed var(--line)}
+.sig-in{flex:1;min-width:0;border:1px solid var(--line);border-radius:8px;padding:5px 8px;font:inherit;font-size:13px;background:var(--bg);color:var(--ink)}
+@media print{.sig-tools,.sig-ph{display:none!important}.sig{border:1px solid #999}}
 .ed-cta{display:flex;justify-content:center;margin:-6px 0 14px}
 .ed-pen{background:none;border:none;cursor:pointer;font-size:14px;margin-left:8px;opacity:.45;vertical-align:middle}
 .ed-pen:hover{opacity:1}
@@ -458,6 +464,7 @@ textarea.fm-in{resize:vertical;min-height:48px;overflow:hidden;display:block}
   .fm-rt th{background:#eee!important;color:#000!important;-webkit-print-color-adjust:exact}
 }
 </style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&display=swap">
 </head>
 <body data-user="{{ user_email }}">
 <canvas id="confetti"></canvas>
@@ -1021,8 +1028,8 @@ function fmHTML(a,k){
     h+=`</section>`});
   if(ED)h+=`<div class="pe-ed-add"><button class="chip" data-fma="addsec|0|0">＋ Nouvelle partie</button></div>`;
   h+=`<section class="fm-sec"><h3>Validation et signatures</h3><p class="fm-note">${esc(def.sign)}</p>
-   <div class="fm-sigs"><div><b>Salarié(e)</b><label>Date<br>${dat("sd")}</label><label>Observations éventuelles${ta('data-fmf="so"',f.so)}</label><div class="fm-sigbox">Signature :</div></div>
-   <div><b>Responsable / représentant AID’AUX</b><label>Date<br>${dat("rd")}</label><div class="fm-sigbox">Signature :</div></div></div></section>
+   <div class="fm-sigs"><div><b>Salarié(e)</b><label>Date<br>${dat("sd")}</label><label>Observations éventuelles${ta('data-fmf="so"',f.so)}</label>${sigPad("fm","sigS",f.sigS)}</div>
+   <div><b>Responsable / représentant AID’AUX</b><label>Date<br>${dat("rd")}</label>${sigPad("fm","sigR",f.sigR)}</div></div></section>
   </div></div>`;
   return h;
 }
@@ -1033,15 +1040,47 @@ const fmSaved=t=>{const el=document.getElementById("fmSave");if(el)el.textConten
 function fmSchedule(){fmSaved("Enregistrement…");clearTimeout(fmTimer);fmTimer=setTimeout(fmFlush,700)}
 function fmFlush(){clearTimeout(fmTimer);fmTimer=null;const a=fmCur();if(!a)return;push(a);fmSaved("✓ Enregistré automatiquement")}
 const fmSize=t=>{t.style.height="auto";t.style.height=Math.max(t.scrollHeight+2,48)+"px"};
+
+// ======== Signature dans l'appli : à la souris / au doigt, ou nom tapé au clavier ========
+function sigPad(ctx,k,val){
+  return `<div class="sig" data-sigctx="${ctx}" data-sigk="${esc(k)}">
+    <canvas class="sig-cv" width="600" height="180" aria-label="Zone de signature : signez à la souris ou au doigt"></canvas>
+    ${val?"":`<span class="sig-ph">✍️ Signez ici (souris, doigt ou stylet)</span>`}
+    <div class="sig-tools"><input class="sig-in" placeholder="…ou tapez le nom au clavier" aria-label="Signature tapée au clavier">
+      <button type="button" class="nc" data-sigclear>Effacer</button></div></div>`}
+function sigStocke(el){const k=el.dataset.sigk;if(el.dataset.sigctx==="fm"){const a=fmCur();return a?fmEnt(a,FM.k)[k]:""}return peForm().v[k]}
+function sigEnreg(el,val){const k=el.dataset.sigk;
+  if(el.dataset.sigctx==="fm"){const a=fmCur();if(!a)return;fmEnt(a,FM.k)[k]=val;fmSchedule()}else{peForm().v[k]=val;peSave()}
+  const ph=el.querySelector(".sig-ph");if(ph)ph.style.display=val?"none":""}
+function sigInit(root){(root||document).querySelectorAll(".sig").forEach(el=>{
+  const cv=el.querySelector("canvas"),c=cv.getContext("2d"),v=sigStocke(el);c.clearRect(0,0,cv.width,cv.height);
+  if(v){const im=new Image();im.onload=()=>c.drawImage(im,0,0,cv.width,cv.height);im.src=v}})}
+let SIG=null;
+document.addEventListener("pointerdown",ev=>{const cv=ev.target.closest&&ev.target.closest(".sig-cv");if(!cv)return;ev.preventDefault();
+  const r=cv.getBoundingClientRect(),c=cv.getContext("2d");c.lineWidth=3.2;c.lineCap="round";c.lineJoin="round";c.strokeStyle="#0D1A5A";
+  const pt=e=>[(e.clientX-r.left)*cv.width/r.width,(e.clientY-r.top)*cv.height/r.height];
+  const [x,y]=pt(ev);c.beginPath();c.moveTo(x,y);c.lineTo(x+.1,y+.1);c.stroke();SIG={cv,c,pt};cv.setPointerCapture(ev.pointerId);
+  const ph=cv.parentNode.querySelector(".sig-ph");if(ph)ph.style.display="none"});
+document.addEventListener("pointermove",ev=>{if(!SIG)return;const [x,y]=SIG.pt(ev);SIG.c.lineTo(x,y);SIG.c.stroke();SIG.c.beginPath();SIG.c.moveTo(x,y)});
+document.addEventListener("pointerup",()=>{if(!SIG)return;const el=SIG.cv.closest(".sig");sigEnreg(el,SIG.cv.toDataURL("image/png"));el.querySelector(".sig-in").value="";SIG=null});
+document.addEventListener("input",async ev=>{const t=ev.target;if(!t.classList||!t.classList.contains("sig-in"))return;ev.stopPropagation();
+  const el=t.closest(".sig"),cv=el.querySelector("canvas"),c=cv.getContext("2d"),nom=t.value.trim();
+  try{await document.fonts.load("600 64px 'Dancing Script'")}catch(e){}
+  c.clearRect(0,0,cv.width,cv.height);
+  if(!nom){sigEnreg(el,"");return}
+  let fs=72;c.font=`600 ${fs}px 'Dancing Script', 'Segoe Script', cursive`;while(c.measureText(nom).width>cv.width-40&&fs>24){fs-=4;c.font=`600 ${fs}px 'Dancing Script', 'Segoe Script', cursive`}
+  c.fillStyle="#0D1A5A";c.textBaseline="middle";c.fillText(nom,20,cv.height/2+6);sigEnreg(el,cv.toDataURL("image/png"))},true);
+document.addEventListener("click",ev=>{const b=ev.target.closest&&ev.target.closest("[data-sigclear]");if(!b)return;ev.stopPropagation();
+  const el=b.closest(".sig"),cv=el.querySelector("canvas");cv.getContext("2d").clearRect(0,0,cv.width,cv.height);el.querySelector(".sig-in").value="";sigEnreg(el,"")},true);
 function fmRedessiner(){const a=fmCur();if(!a)return;const c=FMEL.querySelector(".fm-body"),y=c?c.scrollTop:0;
-  FMEL.innerHTML=fmHTML(a,FM.k);const c2=FMEL.querySelector(".fm-body");if(c2)c2.scrollTop=y;FMEL.querySelectorAll("textarea").forEach(x=>{x.style.height="auto";x.style.height=x.scrollHeight+"px"})}
+  FMEL.innerHTML=fmHTML(a,FM.k);sigInit(FMEL);const c2=FMEL.querySelector(".fm-body");if(c2)c2.scrollTop=y;FMEL.querySelectorAll("textarea").forEach(x=>{x.style.height="auto";x.style.height=x.scrollHeight+"px"})}
 function fmOpen(a,k){FM.edit=false;
   const f=fmEnt(a,k),e=a.vie.ent[k];
   if(f.d===undefined)f.d=e.le||e.rdv||fmIso(TODAY);
   ["lieu","pres","poste"].forEach(x=>{if(f[x]===undefined)f[x]=""});
   if(f.per===undefined)f.per=fmPrec(a,k);
   FM.id=a.id;FM.k=k;
-  FMEL.innerHTML=fmHTML(a,k);FMEL.onscroll=()=>{if(FMEL.scrollTop)FMEL.scrollTop=0};FMEL.hidden=false;document.body.classList.add("fm-open");
+  FMEL.innerHTML=fmHTML(a,k);sigInit(FMEL);FMEL.onscroll=()=>{if(FMEL.scrollTop)FMEL.scrollTop=0};FMEL.hidden=false;document.body.classList.add("fm-open");
   FMEL.querySelectorAll("textarea").forEach(fmSize);
   const b=FMEL.querySelector(".fm-body");if(b)b.scrollTop=0;
 }
@@ -1598,12 +1637,12 @@ function peFormHTML(){
       const ck="c:"+it.key,on=!!V[ck];
       const tete=it.box?`<label class="pe-qc">${cb(`data-pec="${esc(ck)}"`,on,"")}<span>${esc(it.t)}</span></label>`:`<span>${esc(it.t)}</span>`;
       h+=`<div class="fm-q pe-q">${tete}${it.box?`<span class="pr pe-prc">${on?"☑":"☐"} ${esc(it.t)}</span>`:""}${it.ans?ta("r:"+it.key,"Réponse…"):""}</div>`});
-    if(s.sig)h+=`<div class="fm-sigs"><div><b>Salarié(e)</b><label>Date<br><input class="fm-in" type="date" min="2000-01-01" max="2040-12-31" data-pev="sig:sd" value="${esc(V["sig:sd"]||"")}"></label><label>Observations éventuelles${ta("sig:so")}</label><div class="fm-sigbox">Signature :</div></div>
-      <div><b>Responsable / représentant AID’AUX</b><label>Date<br><input class="fm-in" type="date" min="2000-01-01" max="2040-12-31" data-pev="sig:rd" value="${esc(V["sig:rd"]||"")}"></label><div class="fm-sigbox">Signature :</div></div></div>`;
+    if(s.sig)h+=`<div class="fm-sigs"><div><b>Salarié(e)</b><label>Date<br><input class="fm-in" type="date" min="2000-01-01" max="2040-12-31" data-pev="sig:sd" value="${esc(V["sig:sd"]||"")}"></label><label>Observations éventuelles${ta("sig:so")}</label>${sigPad("pe","sig:imgS",V["sig:imgS"])}</div>
+      <div><b>Responsable / représentant AID’AUX</b><label>Date<br><input class="fm-in" type="date" min="2000-01-01" max="2040-12-31" data-pev="sig:rd" value="${esc(V["sig:rd"]||"")}"></label>${sigPad("pe","sig:imgR",V["sig:imgR"])}</div></div>`;
     h+=`</section>`});
   if(ED)h+=`<div class="pe-ed-add"><button class="chip" data-pea="addsec|0|0">＋ Nouvelle partie</button></div>`;
-  if(!S.secs.some(x=>x.sig))h+=`<section class="fm-sec"><h3>Validation et signatures</h3><div class="fm-sigs"><div><b>Salarié(e)</b><label>Date<br><input class="fm-in" type="date" min="2000-01-01" max="2040-12-31" data-pev="sig:sd" value="${esc(V["sig:sd"]||"")}"></label><label>Observations éventuelles${ta("sig:so")}</label><div class="fm-sigbox">Signature :</div></div>
-      <div><b>Responsable / représentant AID’AUX</b><label>Date<br><input class="fm-in" type="date" min="2000-01-01" max="2040-12-31" data-pev="sig:rd" value="${esc(V["sig:rd"]||"")}"></label><div class="fm-sigbox">Signature :</div></div></div></section>`;
+  if(!S.secs.some(x=>x.sig))h+=`<section class="fm-sec"><h3>Validation et signatures</h3><div class="fm-sigs"><div><b>Salarié(e)</b><label>Date<br><input class="fm-in" type="date" min="2000-01-01" max="2040-12-31" data-pev="sig:sd" value="${esc(V["sig:sd"]||"")}"></label><label>Observations éventuelles${ta("sig:so")}</label>${sigPad("pe","sig:imgS",V["sig:imgS"])}</div>
+      <div><b>Responsable / représentant AID’AUX</b><label>Date<br><input class="fm-in" type="date" min="2000-01-01" max="2040-12-31" data-pev="sig:rd" value="${esc(V["sig:rd"]||"")}"></label>${sigPad("pe","sig:imgR",V["sig:imgR"])}</div></div></section>`;
   return h+`</div>`;
 }
 function peStructEd(){const f=peForm();if(!f.struct)f.struct=JSON.parse(JSON.stringify(PE.struct));return f.struct}
@@ -1635,7 +1674,7 @@ function peAfficher(){
     :PE.edit?"Mode modification : changez le texte, supprimez 🗑 ou déplacez ↑ ↓ les questions. La numérotation des parties se refait toute seule. Les réponses déjà écrites sont conservées."
     :"Formulaire créé automatiquement à partir du PDF. Tout s’enregistre tout seul. Bouton « Imprimer / PDF » pour la version à signer.";
   document.getElementById("peForm").hidden=enPdf;document.getElementById("pePages").hidden=!enPdf;
-  if(!enPdf){const f=document.getElementById("peForm"),y=document.getElementById("peBody").scrollTop;f.innerHTML=peFormHTML();f.querySelectorAll("textarea").forEach(peAuto);document.getElementById("peBody").scrollTop=y}
+  if(!enPdf){const f=document.getElementById("peForm"),y=document.getElementById("peBody").scrollTop;f.innerHTML=peFormHTML();sigInit(f);f.querySelectorAll("textarea").forEach(peAuto);document.getElementById("peBody").scrollTop=y}
   else if(PE.doc&&!PE.pages.length){const box=document.getElementById("pePages");
     for(let i=1;i<=PE.doc.numPages;i++){const pg=document.createElement("div");pg.className="pe-page";pg.dataset.p=i;
       pg.innerHTML=`<canvas></canvas><div class="pe-layer"></div>`;box.appendChild(pg);PE.pages.push(pg)}
