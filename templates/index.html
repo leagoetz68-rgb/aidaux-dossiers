@@ -348,6 +348,8 @@ a.btn{text-decoration:none;display:inline-block}
 .rdv-h{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line)}
 .rdv-h h3{margin:0;font-size:19px}
 .rdv-list{overflow:auto;padding:8px}
+.todo-f{display:flex;flex-wrap:wrap;gap:6px;padding:10px 16px;border-bottom:1px solid var(--line)}
+.rdv-li .dot{flex:none}
 .rdv-li{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:none;border:none;border-radius:10px;padding:10px;font:inherit;color:inherit;cursor:pointer}
 .rdv-li:hover{background:var(--bg)}
 .rdv-d{display:flex;flex-direction:column;min-width:96px}
@@ -613,6 +615,31 @@ function ouvrirRdv(){
       :`<div class="empty small">Aucun rendez-vous planifié.</div>`}</div></div>`;
   el.hidden=false;document.body.classList.add("fm-open");
 }
+// ---- Liste « À traiter » : échéances + dossiers incomplets, filtrables par type ----
+const TODO_GRAV={bad:0,vide:1,warn:2,doss:3};
+function listeTodo(){const l=[];
+  S.poste.forEach(p=>{
+    echListe(p).forEach(([k,lab,th])=>{const st=echSt(p,k,th);if(!["vide","bad","warn"].includes(st.k))return;
+      l.push({p,f:k,t:lab,st:st.k,txt:st.t+(st.s?", "+st.s:""),d:(p.ech[k]||{}).date||""})});
+    const pr=progress(p);if(!pr.done&&!verifie(p))l.push({p,f:"dossier",t:"Dossier incomplet",st:"doss",txt:pr.v+" / "+pr.t+" éléments validés",d:""})});
+  return l.sort((a,b)=>TODO_GRAV[a.st]-TODO_GRAV[b.st]||String(a.d||"9").localeCompare(String(b.d||"9"))||a.p.nom.localeCompare(b.p.nom,"fr"))}
+let TODO_F="tous";
+function ouvrirTodo(){
+  const tout=listeTodo(),l=TODO_F==="tous"?tout:tout.filter(x=>x.f===TODO_F);
+  const types=[["tous","Tout"],...ECH.map(([k,lab])=>[k,lab]),["dossier","Dossier incomplet"]].filter(([k])=>k==="tous"||tout.some(x=>x.f===k));
+  let el=document.getElementById("rdvPanel");
+  if(!el){el=document.createElement("div");el.id="rdvPanel";el.className="rdv-ov";document.body.appendChild(el)}
+  el.innerHTML=`<div class="rdv-box" role="dialog" aria-modal="true" aria-label="À traiter">
+    <div class="rdv-h"><h3>🔥 À traiter (${l.length})</h3><button class="btn light" data-rdvclose>Fermer</button></div>
+    <div class="todo-f">${types.map(([k,lab])=>`<button class="chip" data-todof="${k}" aria-pressed="${TODO_F===k}">${lab} (${k==="tous"?tout.length:tout.filter(x=>x.f===k).length})</button>`).join("")}</div>
+    <div class="rdv-list">${l.length?l.map(r=>`<button class="rdv-li" data-rdvopen="${r.p.id}">
+      <i class="dot st-${r.st==="doss"?"bad":r.st}" aria-hidden="true"></i>
+      <span class="rdv-t"><b>${esc(r.p.nom)}</b><small>${esc(r.t)} · ${esc(r.txt)}</small></span><span aria-hidden="true">›</span></button>`).join("")
+      :`<div class="empty small">Rien à traiter dans cette catégorie 🎉</div>`}</div></div>`;
+  el.hidden=false;document.body.classList.add("fm-open");
+}
+document.addEventListener("click",ev=>{const t=ev.target.closest&&ev.target.closest("#todoBtn,[data-todof]");if(!t)return;
+  if(t.dataset.todof)TODO_F=t.dataset.todof;else TODO_F="tous";ouvrirTodo()});
 function fermerRdv(){const el=document.getElementById("rdvPanel");if(el)el.hidden=true;document.body.classList.remove("fm-open")}
 document.addEventListener("click",ev=>{
   const t=ev.target;
@@ -630,7 +657,7 @@ function renderHero(){
   const rdv=listeRdv().length;
   document.getElementById("hero").innerHTML=
    `<div class="gauge total">${ring(pct,"var(--teal)",true)}<div><h3>Toute l’équipe</h3><p>${ok} dossier${ok>1?"s":""} sur ${tot} à jour${pct===100?", bravo":""}</p></div></div>
-    <div class="gauge"><div class="bignum" style="color:#FF8A6B">${aT}</div><div><h3>À traiter</h3><p>Échéances proches, expirées ou à renseigner, et dossiers incomplets</p></div></div>
+    <button class="gauge gauge-btn" id="todoBtn" aria-label="Voir la liste des choses à traiter"><div class="bignum" style="color:#FF8A6B">${aT}</div><div><h3>À traiter</h3><p>Échéances proches, expirées ou à renseigner, et dossiers incomplets · <u>voir la liste</u></p></div></button>
     <button class="gauge gauge-btn" id="rdvBtn" aria-label="Voir les ${rdv} rendez-vous à venir"><div class="bignum" style="color:#C9B8FF">${rdv}</div><div><h3>RDV à venir</h3><p>Médecine du travail et entretiens déjà planifiés · <u>voir la liste</u></p></div></button>`;
 }
 function renderFeed(){
