@@ -105,6 +105,25 @@ def init_db():
             # Catégorie : 'terrain' ou 'administratif' (NULL = pas encore classé)
             cur.execute("ALTER TABLE dossiers_salaries ADD COLUMN IF NOT EXISTS categorie TEXT")
             _classer_categories(cur)
+            # Entretiens du personnel administratif : PDF importé par salarié,
+            # par type (annuel / professionnel) et par année, avec le texte écrit dessus.
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS dossiers_pdf (
+                    id          SERIAL PRIMARY KEY,
+                    salarie_id  INTEGER NOT NULL REFERENCES dossiers_salaries(id) ON DELETE CASCADE,
+                    type        TEXT NOT NULL,
+                    annee       INTEGER NOT NULL,
+                    nom_fichier TEXT,
+                    contenu     BYTEA NOT NULL,
+                    notes       JSONB NOT NULL DEFAULT '[]'::jsonb,
+                    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    updated_by  TEXT
+                )
+                """
+            )
+            cur.execute("CREATE INDEX IF NOT EXISTS dossiers_pdf_salarie ON dossiers_pdf (salarie_id)")
             # Fil d'actualité affiché en haut de l'appli
             cur.execute(
                 """
@@ -295,6 +314,133 @@ def api_archiver(sid):
     finally:
         conn.close()
     return jsonify({"ok": True, "salarie": salarie, "feed": feed})
+
+
+# ---- Entretiens du personnel administratif (PDF) ----
+TYPES_PDF = {"annuel": "Entretien annuel", "pro": "Entretien professionnel"}
+TAILLE_MAX_PDF = 4 * 1024 * 1024  # Vercel refuse les envois de plus de 4,5 Mo
+
+
+def _pdf_info(r):
+    return {"id": r["id"], "type": r["type"], "annee": r["annee"], "nom": r["nom_fichier"] or "",
+            "maj": r["updated_at"].isoformat() if r.get("updated_at") else ""}
+
+
+@app.route("/api/salaries/<int:sid>/pdf")
+def api_pdf_liste(sid):
+    conn = auth._conn()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """SELECT id, type, annee, nom_fichier, updated_at FROM dossiers_pdf
+                   WHERE salarie_id = %s ORDER BY annee DESC, id DESC""",
+                (sid,),
+            )
+            return jsonify({"ok": True, "pdf": [_pdf_info(r) for r in cur.fetchall()]})
+    finally:
+        conn.close()
+
+
+@app.route("/api/salaries/<int:sid>/pdf", methods=["POST"])
+def api_pdf_importer(sid):
+    f = request.files.get("fichier")
+    typ = request.form.get("type")
+    try:
+        annee = int(request.form.get("annee") or 0)
+    except ValueError:
+        annee = 0
+    if typ not in TYPES_PDF:
+        return jsonify({"ok": False, "erreur": "Type d'entretien inconnu"}), 400
+    if not 2000 <= annee <= 2100:
+        return jsonify({"ok": False, "erreur": "Année invalide"}), 400
+    if not f:
+        return jsonify({"ok": False, "erreur": "Aucun fichier"}), 400
+    contenu = f.read()
+    if not contenu.startswith(b"%PDF"):
+        return jsonify({"ok": False, "erreur": "Le fichier n'est pas un PDF"}), 400
+    if len(contenu) > TAILLE_MAX_PDF:
+        return jsonify({"ok": False, "erreur": "PDF trop lourd (4 Mo maximum)"}), 400
+    conn = auth._conn()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT nom FROM dossiers_salaries WHERE id = %s", (sid,))
+            sal = cur.fetchone()
+            if not sal:
+                return jsonify({"ok": False, "erreur": "Salarié introuvable"}), 404
+            cur.execute(
+                """INSERT INTO dossiers_pdf (salarie_id, type, annee, nom_fichier, contenu, updated_by)
+                   VALUES (%s, %s, %s, %s, %s, %s) RETURNING id, type, annee, nom_fichier, updated_at""",
+                (sid, typ, annee, (f.filename or "")[:200], contenu, session.get("user_email")),
+            )
+            info = _pdf_info(cur.fetchone())
+            _ajouter_news(cur, {"txt": f"{TYPES_PDF[typ]} {annee} de {sal['nom']} importé"})
+            feed = _feed(cur)
+        conn.commit()
+    finally:
+        conn.close()
+    return jsonify({"ok": True, "pdf": info, "feed": feed})
+
+
+@app.route("/api/pdf/<int:pid>")
+def api_pdf_fichier(pid):
+    conn = auth._conn()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT contenu FROM dossiers_pdf WHERE id = %s", (pid,))
+            row = cur.fetchone()
+    finally:
+        conn.close()
+    if not row:
+        abort(404)
+    resp = Response(bytes(row[0]), mimetype="application/pdf")
+    resp.headers["Cache-Control"] = "private, no-store"
+    return resp
+
+
+@app.route("/api/pdf/<int:pid>/notes")
+def api_pdf_notes(pid):
+    conn = auth._conn()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT notes FROM dossiers_pdf WHERE id = %s", (pid,))
+            row = cur.fetchone()
+    finally:
+        conn.close()
+    if not row:
+        return jsonify({"ok": False, "erreur": "Document introuvable"}), 404
+    return jsonify({"ok": True, "notes": row[0] or []})
+
+
+@app.route("/api/pdf/<int:pid>/notes", methods=["PUT"])
+def api_pdf_notes_maj(pid):
+    notes = (request.get_json(silent=True) or {}).get("notes")
+    if not isinstance(notes, list) or len(notes) > 2000:
+        return jsonify({"ok": False, "erreur": "Notes invalides"}), 400
+    conn = auth._conn()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE dossiers_pdf SET notes = %s, updated_at = now(), updated_by = %s WHERE id = %s",
+                (Json(notes), session.get("user_email"), pid),
+            )
+            if cur.rowcount == 0:
+                return jsonify({"ok": False, "erreur": "Document introuvable"}), 404
+        conn.commit()
+    finally:
+        conn.close()
+    return jsonify({"ok": True})
+
+
+@app.route("/api/pdf/<int:pid>", methods=["DELETE"])
+def api_pdf_supprimer(pid):
+    conn = auth._conn()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM dossiers_pdf WHERE id = %s", (pid,))
+        conn.commit()
+    finally:
+        conn.close()
+    return jsonify({"ok": True})
 
 
 # --- Application installable (écran d'accueil iPhone / Android) ---
