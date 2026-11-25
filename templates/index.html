@@ -330,6 +330,22 @@ a.btn{text-decoration:none;display:inline-block}
 .vcard.vc-medecine.st-warn .v-st,.vc-medecine .count.st-warn,.pill.st-warn[data-ed$="|medecine"]{background:#E3EEFB!important;color:#1F5FBF!important}
 .dots .dot:nth-child(4).st-warn{background:#1F5FBF!important}
 
+/* ---- Entretiens PDF (personnel administratif) ---- */
+.pdf-zone{display:flex;flex-direction:column;gap:6px;align-items:flex-start;margin:8px 0;padding:10px;border:1px dashed var(--line);border-radius:10px;font-size:13px}
+.pdf-li{display:flex;align-items:center;gap:8px;width:100%}
+.pdf-li small{flex:1;min-width:0;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pdf-li .btn{padding:5px 12px}
+.pe-aide{max-width:960px;margin:0 auto 10px;color:var(--ink2);font-size:13px;text-align:center}
+#pePages{display:flex;flex-direction:column;align-items:center;gap:16px}
+.pe-page{position:relative;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.15)}
+.pe-page canvas{display:block}
+.pe-layer{position:absolute;inset:0;cursor:text}
+.pe-note{position:absolute;display:flex;align-items:flex-start}
+.pe-grip{position:absolute;left:-16px;top:0;cursor:move;color:#1B2A6B;font-size:14px;line-height:1;padding:2px;touch-action:none;opacity:.55;user-select:none}
+.pe-note:hover .pe-grip,.pe-note:focus-within .pe-grip{opacity:1}
+.pe-note textarea{font-family:Helvetica,Arial,sans-serif;line-height:1.25;color:#0D1A5A;background:rgba(255,248,170,.35);border:1px dashed rgba(27,42,107,.35);border-radius:3px;padding:1px 3px;resize:horizontal;overflow:hidden;min-width:40px;max-width:100%}
+.pe-note textarea:focus{outline:2px solid var(--teal);background:rgba(255,248,170,.6)}
+
 /* ---- Compte rendu d'entretien ---- */
 .fm{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column;overflow:hidden}
 .fm[hidden]{display:none}
@@ -796,8 +812,8 @@ function carteEnt(a,d){
       </div>
     </div>
     ${note}
-    <div class="v-row"><button class="btn" data-fmopen="${d.k}">✍️ ${pg.n?"Reprendre":"Remplir"} le compte rendu</button>${pg.n?`<small class="fm-prog">${pg.n}/${pg.t} réponses</small>`:""}
-      <button class="nc" data-entnc="${d.k}" aria-pressed="${!!e.nc}">N/C</button></div>
+    ${catDe(a)==="administratif"&&PDF_TYPE[d.k]?cartePdf(a,d)+`<div class="v-row"><button class="nc" data-entnc="${d.k}" aria-pressed="${!!e.nc}">N/C</button></div>`:`<div class="v-row"><button class="btn" data-fmopen="${d.k}">✍️ ${pg.n?"Reprendre":"Remplir"} le compte rendu</button>${pg.n?`<small class="fm-prog">${pg.n}/${pg.t} réponses</small>`:""}
+      <button class="nc" data-entnc="${d.k}" aria-pressed="${!!e.nc}">N/C</button></div>`}
     <textarea class="v-com" data-entc="${d.k}" rows="2" placeholder="Commentaire…" aria-label="Commentaire ${d.t}">${esc(e.c)}</textarea>
   </article>`;
 }
@@ -1244,6 +1260,171 @@ function confetti(){
   let f=0;(function step(){cx.clearRect(0,0,cv.width,cv.height);ps.forEach(p=>{p.vy+=.35;p.vx*=.99;p.x+=p.vx;p.y+=p.vy;p.a+=p.va;cx.save();cx.translate(p.x,p.y);cx.rotate(p.a);cx.fillStyle=p.c;cx.fillRect(-p.r/2,-p.r/4,p.r,p.r/2);cx.restore()});if(++f<150)requestAnimationFrame(step);else cx.clearRect(0,0,cv.width,cv.height)})();
 }
 if("serviceWorker" in navigator)navigator.serviceWorker.register("/sw.js").catch(()=>{});
+
+// ======== Entretiens du personnel administratif : PDF importé + texte écrit dessus ========
+const PDF_TYPE={annuel:"annuel",parcours:"pro"};
+const PDF_LIB={annuel:"Entretien annuel",pro:"Entretien professionnel"};
+const PDFS={},PDF_CHARGE={};
+async function chargerPdf(sid,force){
+  if(PDF_CHARGE[sid]&&!force)return;PDF_CHARGE[sid]=true;
+  try{const j=await api("/api/salaries/"+sid+"/pdf");PDFS[sid]=j.pdf||[]}catch(e){PDFS[sid]=[];if(e.message!=="login")toast("Entretiens PDF indisponibles : "+e.message)}
+  if(UI.open==sid)render();
+}
+function cartePdf(a,d){
+  const typ=PDF_TYPE[d.k];
+  if(PDFS[a.id]===undefined)chargerPdf(a.id);
+  const l=(PDFS[a.id]||[]).filter(x=>x.type===typ);
+  const liste=PDFS[a.id]===undefined?`<small style="color:var(--ink2)">Chargement…</small>`
+    :l.length?l.map(x=>`<div class="pdf-li"><button class="btn" data-pdfopen="${x.id}">📄 ${x.annee}</button><small title="${esc(x.nom)}">${esc(x.nom)}</small><button class="li-x" data-pdfdel="${x.id}" title="Supprimer ce PDF" aria-label="Supprimer le PDF ${x.annee}">×</button></div>`).join("")
+    :`<small style="color:var(--ink2)">Aucun PDF importé pour l’instant.</small>`;
+  return `<div class="pdf-zone"><b>📄 ${PDF_LIB[typ]} : documents PDF</b>${liste}
+    <button class="chip" data-pdfadd="${typ}">＋ Importer le PDF de l’année</button></div>`;
+}
+// --- import ---
+const PDF_IN=document.createElement("input");PDF_IN.type="file";PDF_IN.accept="application/pdf,.pdf";PDF_IN.hidden=true;document.body.appendChild(PDF_IN);
+let PDF_ADD=null;
+PDF_IN.addEventListener("change",async()=>{
+  const f=PDF_IN.files[0];PDF_IN.value="";if(!f||!PDF_ADD)return;
+  const {sid,typ,annee}=PDF_ADD;PDF_ADD=null;
+  if(f.size>4*1024*1024){toast("PDF trop lourd (4 Mo maximum)");return}
+  const fd=new FormData();fd.append("fichier",f);fd.append("type",typ);fd.append("annee",annee);
+  toast("Import en cours…");
+  try{const r=await fetch("/api/salaries/"+sid+"/pdf",{method:"POST",body:fd});
+    if(r.redirected&&r.url.includes("/login")){location.href="/login";return}
+    const j=await r.json().catch(()=>({}));if(!r.ok||j.ok===false)throw new Error(j.erreur||"erreur "+r.status);
+    (PDFS[sid]=PDFS[sid]||[]).unshift(j.pdf);PDFS[sid].sort((x,y)=>y.annee-x.annee);
+    if(j.feed){S.feed=j.feed;renderFeed()}render();toast(PDF_LIB[typ]+" "+annee+" importé");pdfOuvrir(j.pdf.id);
+  }catch(e){toast("Import impossible : "+e.message)}
+});
+document.addEventListener("click",async ev=>{
+  const t=ev.target.closest("button");if(!t)return;
+  const a=UI.open&&find(UI.open);
+  if(t.dataset.pdfadd&&a){
+    const an=prompt("Année de l’entretien ?",String(new Date().getFullYear()));if(an===null)return;
+    const annee=parseInt(an,10);if(!(annee>=2000&&annee<=2100)){toast("Année invalide");return}
+    if((PDFS[a.id]||[]).some(x=>x.type===t.dataset.pdfadd&&x.annee===annee)&&!confirm("Il y a déjà un PDF pour "+annee+". En ajouter un autre ?"))return;
+    PDF_ADD={sid:a.id,typ:t.dataset.pdfadd,annee};PDF_IN.click();return}
+  if(t.dataset.pdfopen){pdfOuvrir(+t.dataset.pdfopen);return}
+  if(t.dataset.pdfdel&&a){const x=(PDFS[a.id]||[]).find(y=>y.id==t.dataset.pdfdel);
+    if(!x||!confirm("Supprimer définitivement le PDF "+PDF_LIB[x.type].toLowerCase()+" "+x.annee+" (et tout ce qui a été écrit dessus) ?"))return;
+    try{await api("/api/pdf/"+x.id,{method:"DELETE"});PDFS[a.id]=PDFS[a.id].filter(y=>y.id!==x.id);render();toast("PDF supprimé")}catch(e){toast("Suppression impossible : "+e.message)}}
+});
+// --- éditeur ---
+let PDFJS=null;
+function chargerScript(src){return new Promise((ok,ko)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=()=>ko(new Error("chargement impossible"));document.head.appendChild(s)})}
+async function pdfjs(){
+  if(PDFJS)return PDFJS;
+  await chargerScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js");
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  return PDFJS=window.pdfjsLib;
+}
+const PE={id:null,notes:[],pages:[],timer:null,doc:null};
+const PEL=document.createElement("div");PEL.className="fm";PEL.hidden=true;document.body.appendChild(PEL);
+function peSaved(t){const el=document.getElementById("peSave");if(el)el.textContent=t}
+function peSave(){clearTimeout(PE.timer);peSaved("Enregistrement…");PE.timer=setTimeout(peFlush,700)}
+async function peFlush(){clearTimeout(PE.timer);PE.timer=null;if(!PE.id)return;
+  const notes=PE.notes.filter(n=>String(n.t||"").trim());
+  try{await api("/api/pdf/"+PE.id+"/notes",{method:"PUT",body:JSON.stringify({notes})});peSaved("✓ Enregistré automatiquement")}
+  catch(e){peSaved("⚠️ Pas enregistré");if(e.message!=="login")toast("Pas enregistré : "+e.message)}}
+async function pdfOuvrir(pid){
+  const a=UI.open&&find(UI.open);let info=null;
+  Object.values(PDFS).forEach(l=>l.forEach(x=>{if(x.id===pid)info=x}));
+  PE.id=pid;PE.notes=[];PE.pages=[];
+  PEL.innerHTML=`<div class="fm-bar"><div class="fm-title"><b>${info?PDF_LIB[info.type]+" "+info.annee:"Entretien"}</b><small>${esc(a?a.nom:"")} · cliquez sur la page pour écrire</small></div>
+    <span class="fm-save" id="peSave">Chargement…</span>
+    <button class="btn light" id="peDl">⬇️ Télécharger</button><button class="btn teal" id="peClose">Fermer</button></div>
+    <div class="fm-body" id="peBody"><p class="pe-aide">Cliquez à l’endroit où vous voulez écrire. Faites glisser la poignée ⠿ pour déplacer un texte ; videz-le pour le supprimer.</p><div id="pePages"></div></div>`;
+  PEL.hidden=false;document.body.classList.add("fm-open");
+  try{
+    const [lib,notes,buf]=await Promise.all([pdfjs(),api("/api/pdf/"+pid+"/notes"),fetch("/api/pdf/"+pid).then(r=>{if(!r.ok)throw new Error("erreur "+r.status);return r.arrayBuffer()})]);
+    if(PE.id!==pid)return;
+    PE.notes=Array.isArray(notes.notes)?notes.notes:[];PE.buf=buf.slice(0);
+    PE.doc=await lib.getDocument({data:buf}).promise;
+    const box=document.getElementById("pePages");
+    for(let i=1;i<=PE.doc.numPages;i++){
+      const pg=document.createElement("div");pg.className="pe-page";pg.dataset.p=i;
+      pg.innerHTML=`<canvas></canvas><div class="pe-layer"></div>`;box.appendChild(pg);PE.pages.push(pg);
+    }
+    await peRendre();peSaved("✓ Enregistré automatiquement");
+  }catch(e){peSaved("⚠️ "+e.message);toast("Ouverture impossible : "+e.message)}
+}
+async function peRendre(){
+  const larg=Math.min(document.getElementById("peBody").clientWidth-32,960);
+  for(const pg of PE.pages){
+    const page=await PE.doc.getPage(+pg.dataset.p);
+    const v0=page.getViewport({scale:1}),sc=larg/v0.width,dpr=window.devicePixelRatio||1;
+    const v=page.getViewport({scale:sc*dpr}),cv=pg.querySelector("canvas");
+    cv.width=v.width;cv.height=v.height;cv.style.width=larg+"px";cv.style.height=(v0.height*sc)+"px";
+    pg.style.width=larg+"px";pg.style.height=(v0.height*sc)+"px";
+    await page.render({canvasContext:cv.getContext("2d"),viewport:v}).promise;
+    peCalque(pg);
+  }
+}
+function peCalque(pg){
+  const L=pg.querySelector(".pe-layer"),p=+pg.dataset.p,W=pg.clientWidth,H=pg.clientHeight;
+  L.innerHTML="";
+  PE.notes.forEach((n,i)=>{if(n.p!==p)return;
+    const d=document.createElement("div");d.className="pe-note";d.dataset.i=i;
+    d.style.left=n.x*W+"px";d.style.top=n.y*H+"px";
+    d.innerHTML=`<span class="pe-grip" title="Déplacer">⠿</span><textarea rows="1" spellcheck="true"></textarea>`;
+    const ta=d.querySelector("textarea");ta.value=n.t||"";
+    ta.style.fontSize=(n.fs||0.017)*W+"px";ta.style.width=(n.w||0.4)*W+"px";
+    L.appendChild(d);peAuto(ta);
+  });
+}
+function peAuto(ta){ta.style.height="auto";ta.style.height=ta.scrollHeight+"px"}
+PEL.addEventListener("input",ev=>{const ta=ev.target;if(ta.tagName!=="TEXTAREA")return;
+  const n=PE.notes[+ta.parentNode.dataset.i];if(!n)return;n.t=ta.value;peAuto(ta);peSave()});
+PEL.addEventListener("focusout",ev=>{const ta=ev.target;if(ta.tagName!=="TEXTAREA")return;
+  const i=+ta.parentNode.dataset.i,n=PE.notes[i];
+  if(n&&!String(n.t||"").trim()){PE.notes.splice(i,1);peCalque(ta.closest(".pe-page"));peSave()}});
+// mémorise la largeur quand on redimensionne une zone de texte
+PEL.addEventListener("mouseup",ev=>{const ta=ev.target;if(ta.tagName!=="TEXTAREA")return;
+  const n=PE.notes[+ta.parentNode.dataset.i],W=ta.closest(".pe-page").clientWidth;
+  if(n&&Math.abs((n.w||0.4)-ta.offsetWidth/W)>0.005){n.w=ta.offsetWidth/W;peSave()}});
+PEL.addEventListener("click",ev=>{
+  if(ev.target.id==="peClose"){peFermer();return}
+  if(ev.target.id==="peDl"){peTelecharger();return}
+  const L=ev.target.closest(".pe-layer");if(!L||ev.target!==L)return;
+  const pg=L.parentNode,r=L.getBoundingClientRect();
+  PE.notes.push({p:+pg.dataset.p,x:(ev.clientX-r.left)/r.width,y:(ev.clientY-r.top-8)/r.height,w:Math.min(0.4,1-(ev.clientX-r.left)/r.width-0.01),fs:0.017,t:""});
+  peCalque(pg);const tas=L.querySelectorAll("textarea");tas[tas.length-1].focus();
+});
+// déplacement avec la poignée
+let PE_DRAG=null;
+PEL.addEventListener("pointerdown",ev=>{const g=ev.target.closest(".pe-grip");if(!g)return;ev.preventDefault();
+  const d=g.parentNode,pg=d.closest(".pe-page");PE_DRAG={d,pg,dx:ev.clientX-d.offsetLeft,dy:ev.clientY-d.offsetTop};g.setPointerCapture(ev.pointerId)});
+PEL.addEventListener("pointermove",ev=>{if(!PE_DRAG)return;const {d,pg,dx,dy}=PE_DRAG;
+  d.style.left=Math.max(0,Math.min(pg.clientWidth-20,ev.clientX-dx))+"px";d.style.top=Math.max(0,Math.min(pg.clientHeight-10,ev.clientY-dy))+"px"});
+PEL.addEventListener("pointerup",()=>{if(!PE_DRAG)return;const {d,pg}=PE_DRAG;PE_DRAG=null;
+  const n=PE.notes[+d.dataset.i];if(n){n.x=d.offsetLeft/pg.clientWidth;n.y=d.offsetTop/pg.clientHeight;peSave()}});
+async function peFermer(){if(PE.timer)await peFlush();PE.id=null;PE.doc=null;PEL.hidden=true;PEL.innerHTML="";document.body.classList.remove("fm-open")}
+let PE_RS=null;window.addEventListener("resize",()=>{if(!PE.doc)return;clearTimeout(PE_RS);PE_RS=setTimeout(peRendre,250)});
+// Télécharger le PDF avec le texte écrit dessus (pour imprimer, faire signer, archiver)
+async function peTelecharger(){
+  if(!PE.buf)return;
+  try{
+    if(!window.PDFLib)await chargerScript("https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js");
+    const {PDFDocument,StandardFonts,rgb}=window.PDFLib;
+    const doc=await PDFDocument.load(PE.buf.slice(0),{ignoreEncryption:true}),font=await doc.embedFont(StandardFonts.Helvetica);
+    const propre=t=>String(t).replace(/[’‘]/g,"'").replace(/[“”«»]/g,'"').replace(/[–—]/g,"-").replace(/…/g,"...").replace(/ | /g," ")
+      .split("").map(c=>{try{font.encodeText(c);return c}catch(e){return"?"}}).join("");
+    const pages=doc.getPages();
+    PE.notes.forEach(n=>{const pg=pages[n.p-1];if(!pg||!String(n.t||"").trim())return;
+      const {width:W,height:H}=pg.getSize(),fs=(n.fs||0.017)*W,maxW=(n.w||0.4)*W-6,lh=fs*1.25;
+      let y=H-n.y*H-fs-5;const x=n.x*W+4;
+      propre(n.t).split("\n").forEach(par=>{let ligne="";
+        par.split(" ").forEach(m=>{const essai=ligne?ligne+" "+m:m;
+          if(font.widthOfTextAtSize(essai,fs)>maxW&&ligne){pg.drawText(ligne,{x,y,size:fs,font,color:rgb(0.05,0.1,0.35)});y-=lh;ligne=m}else ligne=essai});
+        pg.drawText(ligne,{x,y,size:fs,font,color:rgb(0.05,0.1,0.35)});y-=lh});
+    });
+    const blob=new Blob([await doc.save()],{type:"application/pdf"}),u=URL.createObjectURL(blob);
+    const a=UI.open&&find(UI.open);let info=null;Object.values(PDFS).forEach(l=>l.forEach(x=>{if(x.id===PE.id)info=x}));
+    const lien=document.createElement("a");lien.href=u;lien.download=(info?PDF_LIB[info.type]+" "+info.annee:"Entretien")+(a?" - "+a.nom:"")+".pdf";
+    document.body.appendChild(lien);lien.click();lien.remove();setTimeout(()=>URL.revokeObjectURL(u),5000);
+  }catch(e){toast("Téléchargement impossible : "+e.message)}
+}
+
 render();load();
 </script>
 {% endraw %}
