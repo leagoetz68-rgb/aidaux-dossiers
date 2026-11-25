@@ -2,6 +2,8 @@ import datetime
 import io
 import json
 import os
+import re
+import unicodedata
 
 from flask import Flask, Response, abort, send_file, jsonify, render_template, request, send_from_directory, session
 from psycopg2.extras import Json, RealDictCursor
@@ -29,7 +31,42 @@ auth.proteger(app, endpoints_publics={"relances.cron_relances"})
 
 AGENCES = ["Cronenbourg", "Vendenheim", "Personnel administratif"]
 PHASES = {"arrivee", "poste"}
+# Catégorie de salarié : intervenant terrain (par défaut) ou personnel administratif
+CATEGORIES = {"terrain", "administratif"}
+# Salariés administratifs connus (noms de famille), classés automatiquement une
+# fois. Ensuite la catégorie se change à la main dans la fiche du salarié.
+ADMINISTRATIFS_INITIAUX = ["goetz", "mischel", "pouillaude", "suplon", "soulliez", "fux"]
 CHAMPS_JSON = ("docs", "classeur", "dates", "ech", "vie")
+
+
+def _mots(texte):
+    t = unicodedata.normalize("NFD", str(texte or "")).encode("ascii", "ignore").decode().lower()
+    return re.findall(r"[a-z]+", t)
+
+
+def _est_administratif_connu(nom, agence):
+    if agence == "Personnel administratif":
+        return True
+    mots = _mots(nom)
+    return any(famille in mots for famille in ADMINISTRATIFS_INITIAUX)
+
+
+def _classer_categories(cur):
+    # 1) Salariés jamais classés : terrain, sauf les administratifs connus.
+    cur.execute("SELECT id, nom, agence FROM dossiers_salaries WHERE categorie IS NULL")
+    for sid, nom, agence in cur.fetchall():
+        cat = "administratif" if _est_administratif_connu(nom, agence) else "terrain"
+        cur.execute("UPDATE dossiers_salaries SET categorie = %s WHERE id = %s", (cat, sid))
+    # 2) Une seule fois (repère dans dossiers_meta) : les administratifs connus
+    #    passent en « administratif », même s'ils avaient déjà été classés terrain.
+    #    Après, un choix fait dans la fiche n'est plus jamais écrasé.
+    cur.execute("CREATE TABLE IF NOT EXISTS dossiers_meta (cle TEXT PRIMARY KEY)")
+    cur.execute("INSERT INTO dossiers_meta (cle) VALUES ('categories_admin_v2') ON CONFLICT DO NOTHING")
+    if cur.rowcount:
+        cur.execute("SELECT id, nom, agence FROM dossiers_salaries")
+        for sid, nom, agence in cur.fetchall():
+            if _est_administratif_connu(nom, agence):
+                cur.execute("UPDATE dossiers_salaries SET categorie = 'administratif' WHERE id = %s", (sid,))
 
 
 # ---- Base de données (même base Neon que les autres applis) ----
@@ -65,6 +102,9 @@ def init_db():
                 "ALTER TABLE dossiers_salaries ADD COLUMN IF NOT EXISTS archive BOOLEAN NOT NULL DEFAULT FALSE"
             )
             cur.execute("ALTER TABLE dossiers_salaries ADD COLUMN IF NOT EXISTS archive_le DATE")
+            # Catégorie : 'terrain' ou 'administratif' (NULL = pas encore classé)
+            cur.execute("ALTER TABLE dossiers_salaries ADD COLUMN IF NOT EXISTS categorie TEXT")
+            _classer_categories(cur)
             # Fil d'actualité affiché en haut de l'appli
             cur.execute(
                 """
@@ -90,6 +130,7 @@ def _salarie(row):
     d = dict(row)
     d["embauche"] = d["embauche"].isoformat() if d.get("embauche") else ""
     d["archive_le"] = d["archive_le"].isoformat() if d.get("archive_le") else ""
+    d["categorie"] = d.get("categorie") or "terrain"
     for k in ("created_at", "updated_at"):
         d.pop(k, None)
     return d
@@ -146,6 +187,7 @@ def api_creer():
     agence = body.get("agence")
     phase = body.get("phase") if body.get("phase") in PHASES else "arrivee"
     embauche = body.get("embauche") or None
+    categorie = body.get("categorie") if body.get("categorie") in CATEGORIES else "terrain"
     if not nom:
         return jsonify({"ok": False, "erreur": "Indiquez le nom du salarié"}), 400
     if agence not in AGENCES:
@@ -154,9 +196,9 @@ def api_creer():
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
-                """INSERT INTO dossiers_salaries (nom, agence, embauche, phase, updated_by)
-                   VALUES (%s, %s, %s, %s, %s) RETURNING *""",
-                (nom, agence, embauche, phase, session.get("user_email")),
+                """INSERT INTO dossiers_salaries (nom, agence, embauche, phase, categorie, updated_by)
+                   VALUES (%s, %s, %s, %s, %s, %s) RETURNING *""",
+                (nom, agence, embauche, phase, categorie, session.get("user_email")),
             )
             salarie = _salarie(cur.fetchone())
             if phase == "arrivee":
@@ -185,6 +227,9 @@ def api_maj(sid):
     if body.get("agence") in AGENCES:
         champs.append("agence = %s")
         valeurs.append(body["agence"])
+    if body.get("categorie") in CATEGORIES:
+        champs.append("categorie = %s")
+        valeurs.append(body["categorie"])
     if "embauche" in body:
         champs.append("embauche = %s")
         valeurs.append(body["embauche"] or None)
