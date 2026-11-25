@@ -456,7 +456,7 @@ const STATUS_LAB={manquant:"Manquant",recu:"Reçu",verifie:"Vérifié",nc:"Non c
 const labelOf=k=>([...DOCS_OBL,...DOCS_SIGN].find(x=>x[0]===k)||[,k])[1];
 
 let S={arrivees:[],poste:[],feed:[]},LOADED=false,ERR="";
-let UI={acc:{admin:false,vie:false,ent:false},tab:"poste",agence:"Toutes",cat:"tous",open:null,editor:null,onlyTodo:true,adding:false,addErr:""};
+let UI={acc:{admin:false,vie:false,ent:false},tab:"poste",agence:"Toutes",cat:"tous",open:null,editor:null,etat:"traiter",adding:false,addErr:""};
 
 function norm(p){
   p.docs=p.docs||{};[...DOCS_OBL,...DOCS_SIGN].forEach(([k])=>{if(!p.docs[k])p.docs[k]={s:"manquant",c:""}});
@@ -530,6 +530,13 @@ function progress(a){
 // Catégorie : intervenants terrain / personnel administratif
 const CATS={terrain:"Intervenant terrain",administratif:"Administratif"};
 const catDe=p=>p.categorie==="administratif"?"administratif":"terrain";
+// État du dossier : à traiter (rien de rempli), en cours (commencé), complet
+const ETATS=[["traiter","À traiter"],["cours","En cours"],["complet","Complet"]];
+function etatDossier(p){const pr=progress(p);
+  if(pr.done)return"complet";
+  const rien=[...DOCS_OBL,...DOCS_SIGN].every(([k])=>p.docs[k].s==="manquant"&&!String(p.docs[k].c||"").trim())
+    &&CLASSEUR.every(([k])=>!p.classeur[k])&&DATES.every(([k])=>!p.dates[k]);
+  return rien?"traiter":"cours";}
 const byAg=l=>(UI.agence==="Toutes"?l:l.filter(p=>p.agence===UI.agence)).filter(p=>UI.cat==="tous"||catDe(p)===UI.cat);
 const badgeCat=p=>`<span class="cat-badge ${catDe(p)}">${catDe(p)==="administratif"?"Administratif":"Terrain"}</span>`;
 
@@ -592,8 +599,7 @@ function listeOnglet(){
   if(UI.q)return byAg(UI.tab==="arrivees"?S.arrivees:S.poste).filter(trouve).sort(alpha);
   if(UI.tab==="arrivees")return byAg(S.arrivees).slice().sort(alpha);
   let l=byAg(S.poste);
-  if(UI.onlyTodo)l=l.filter(todo).sort(alpha);
-  else l=l.slice().sort(alpha);
+  l=l.filter(p=>etatDossier(p)===UI.etat).sort(alpha);
   return l;
 }
 function itemArchive(p){
@@ -632,10 +638,11 @@ function viewSplit(){
   head+=`<div class="li-search"><input type="search" id="recherche" value="${esc(UI.q||"")}" placeholder="🔍 Rechercher un salarié…" aria-label="Rechercher un salarié" autocomplete="off"></div>`;
   if(UI.tab==="poste"){
     const nTodo=byAg(S.poste).filter(todo).length;
-    head+=`<div class="li-head"><button class="chip" data-only="1" aria-pressed="${UI.onlyTodo}">À traiter (${nTodo})</button><button class="chip" data-only="0" aria-pressed="${!UI.onlyTodo}">Tout le monde (${byAg(S.poste).length})</button></div>`;
+    const nE=e=>byAg(S.poste).filter(p=>etatDossier(p)===e).length;
+    head+=`<div class="li-head">${ETATS.map(([e,l])=>`<button class="chip" data-etat="${e}" aria-pressed="${UI.etat===e}">${l} (${nE(e)})</button>`).join("")}</div>`;
   }
   const vide=UI.tab==="archives"?`<div class="empty small">Aucun salarié archivé.</div>`:UI.tab==="arrivees"?`<div class="empty small">Aucune arrivée en cours.<br>Ajoutez un nouveau salarié pour suivre son dossier d’embauche.</div>`
-    :`<div class="empty small">Rien à traiter : dossiers complets et échéances à jour.<br><button class="chip" data-only="0" style="margin-top:8px">Voir tout le monde</button></div>`;
+    :`<div class="empty small">${{traiter:"Aucun dossier vide : tous les dossiers ont été commencés.",cours:"Aucun dossier en cours.",complet:"Aucun dossier complet pour l’instant."}[UI.etat]}</div>`;
   const sel=UI.open&&find(UI.open);
   if(UI.open&&!sel)UI.open=null;
   return `<div class="split ${sel?"has-open":""}">
@@ -1000,7 +1007,7 @@ function checkDone(a){
   a.phase="poste";
   S.arrivees=S.arrivees.filter(x=>x!==a);S.poste.unshift(a);
   push(a,{txt:"Dossier de "+a.nom+" bouclé"});
-  UI.tab="poste";UI.onlyTodo=false;render(); // la fiche reste ouverte
+  UI.tab="poste";UI.etat="complet";render(); // la fiche reste ouverte
   toast("Dossier de "+first(a.nom)+" bouclé ! Direction l’espace En poste");confetti();
   return true;
 }
@@ -1121,7 +1128,7 @@ document.addEventListener("click",async ev=>{
     t.disabled=true;
     try{const j=await api("/api/salaries",{method:"POST",body:JSON.stringify({nom,agence,embauche,phase,categorie})});
       const p=norm(j.salarie);S.poste.push(p);S.feed=j.feed||S.feed;
-      UI.adding=false;UI.tab="poste";UI.onlyTodo=false;UI.open=p.id;render();toast(nom+" ajouté(e)")}
+      UI.adding=false;UI.tab="poste";UI.etat=etatDossier(p);UI.open=p.id;render();toast(nom+" ajouté(e)")}
     catch(e){t.disabled=false;document.getElementById("fErr").textContent=e.message}
     return;
   }
@@ -1141,7 +1148,7 @@ document.addEventListener("click",async ev=>{
     pieceStatut(d);render();if(!checkDone(a))push(a);return}
   if(t.dataset.nc&&a&&!NO_NC.includes(t.dataset.nc)){const d=a.docs[t.dataset.nc];d.s=d.s==="nc"?"manquant":"nc";
     if(t.dataset.nc==="permis")a.ech.permis.nc=d.s==="nc";render();if(!checkDone(a))push(a);return}
-  if(t.dataset.only){UI.onlyTodo=t.dataset.only==="1";return render()}
+  if(t.dataset.etat){UI.etat=t.dataset.etat;return render()}
   if(t.dataset.acc){UI.acc[t.dataset.acc]=!UI.acc[t.dataset.acc];return render()}
   if(t.dataset.ed&&!/\|(piece|permis)$/.test(t.dataset.ed)){const k=t.dataset.ed.split("|")[1];UI.acc.vie=true;UI.editor=null;render();
     const el=document.getElementById("vie-"+k);if(el){el.scrollIntoView({behavior:"smooth",block:"center"});el.classList.add("flash");setTimeout(()=>el.classList.remove("flash"),1200)}return}
