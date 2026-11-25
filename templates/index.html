@@ -340,6 +340,10 @@ a.btn{text-decoration:none;display:inline-block}
 .pe-page{position:relative;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.15)}
 .pe-page canvas{display:block}
 .pe-layer{position:absolute;inset:0;cursor:text}
+.mut-disp{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:8px 14px 10px;border-top:1px dashed var(--line);font-size:13px;color:var(--ink2);background:color-mix(in srgb,var(--bad) 6%,transparent)}
+.mut-disp.ok{background:color-mix(in srgb,var(--ok-soft) 55%,transparent)}
+.mut-disp .mut-ch{display:inline-flex;gap:14px;flex-wrap:wrap}
+.mut-disp input[type=date]{border:1px solid var(--line);border-radius:10px;padding:6px 9px;background:var(--bg);color:var(--ink);margin-left:6px}
 .pe-zone{position:absolute;border:none;padding:0;background:rgba(255,226,92,.28);border-bottom:2px solid rgba(232,170,0,.55);border-radius:3px;cursor:text}
 .pe-zone:hover,.pe-zone:focus-visible{background:rgba(255,226,92,.55);outline:none}
 .pe-case{position:absolute;border:none;padding:0;background:rgba(255,226,92,.35);border-radius:2px;cursor:pointer;color:#0D1A5A;font-weight:900;line-height:1;display:grid;place-items:center}
@@ -471,7 +475,7 @@ const XIMI=[
  {n:"09_FIN DE CONTRAT",docs:[],cl:[]}];
 const DATES=[]; // les dates Digiposte (envoi, identifiant, dépôt) ne sont plus suivies
 const PIECE_T={cni:"CNI",titre:"Titre de séjour",passeport:"Passeport"};
-const ECH=[["piece","Pièce d’identité",90],["cpam","Attestation CSS",30],["medecine","Médecine du travail",60],["permis","Permis de conduire",90]];
+const ECH=[["piece","Pièce d’identité",90],["cpam","Attestation CSS",30],["medecine","Médecine du travail",60],["permis","Permis de conduire",90],["mutperso","Fin mutuelle perso",30]];
 const STATUS_NEXT={manquant:"recu",recu:"verifie",verifie:"manquant"};
 const STATUS_LAB={manquant:"Manquant",recu:"Reçu",verifie:"Vérifié",nc:"Non concerné"};
 const labelOf=k=>([...DOCS_OBL,...DOCS_SIGN].find(x=>x[0]===k)||[,k])[1];
@@ -539,7 +543,10 @@ const verifie=p=>!!(p.dates&&p.dates.verif);
 //  nouveau (ou rien d’écrit) → date de validité à renseigner ; ancien → validé d’office ; N/C → échéance masquée
 const permisMode=p=>{if((p.docs.permis&&p.docs.permis.s==="nc")||(p.ech.permis&&p.ech.permis.nc))return"nc";
   const c=String((p.docs.permis||{}).c||"").toLowerCase();return /nouveau/.test(c)?"nouveau":/ancien/.test(c)?"ancien":"aucun"};
-const echListe=p=>ECH.filter(([k])=>k!=="permis"||permisMode(p)!=="nc");
+// Mutuelle : adhésion, ou dispense avec justificatif (attestation CSS ou mutuelle perso jusqu'à sa date anniversaire)
+const mutPerso=p=>{const m=p.docs.mutuelle||{};return m.mut==="dispense"&&m.just==="perso"};
+function mutStatut(d){if(!d.mut)return;d.s=d.mut==="adhesion"||(d.mut==="dispense"&&d.just&&d.jr)?"verifie":"manquant"}
+const echListe=p=>ECH.filter(([k])=>(k!=="permis"||permisMode(p)!=="nc")&&(k!=="mutperso"||mutPerso(p)));
 const echSt=(p,k,th)=>k==="permis"&&permisMode(p)==="ancien"?{k:"ok",t:"Ancien permis",s:"sans date de validité"}:echStatus(p.ech[k],th);
 const todo=p=>(!progress(p).done&&!verifie(p))||echListe(p).some(([k,,th])=>["vide","bad","warn"].includes(echSt(p,k,th).k));
 function progress(a){
@@ -691,18 +698,28 @@ function ligneDoc(a,k,lab){
     pres=`<div class="ptypes">${visibles.map(([v,t])=>v==="passeport"
       ?`<span style="display:inline-flex;align-items:center;gap:8px">${cb(`data-ptyp="${v}" aria-label="${t}"`,!!ty[v]&&!d.pnc,t,nc||d.pnc)}<button class="nc" data-ncpass aria-pressed="${!!d.pnc}" title="Passeport non concerné (ex. réfugié)" aria-label="Passeport non concerné">N/C</button></span>`
       :cb(`data-ptyp="${v}" aria-label="${t}"`,!!ty[v],t,nc)).join("")}</div>`;
+  } else if(k==="mutuelle"){
+    pres=`<div class="ptypes">${cb(`data-mut="adhesion" aria-label="Adhésion à la mutuelle"`,d.mut==="adhesion","Adhésion",nc)}${cb(`data-mut="dispense" aria-label="Dispense de mutuelle"`,d.mut==="dispense","Dispense",nc)}</div>`;
   } else pres=cb(`data-pres="${k}" aria-label="${lab} présent dans le dossier"`,present(d),"",nc);
   const saisine=k==="piece"&&((d.types||{}).titre||d.saisine)
     ?`<div class="saisine" style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:8px 14px 10px;border-top:1px dashed var(--line);font-size:13px;color:var(--ink2)">
       <span><b style="color:var(--ink)">Saisine</b> <small>(vérification préalable à l’embauche du titre de séjour)</small></span>
       <label style="display:flex;align-items:center;gap:6px">Demande faite le <input type="date" min="2000-01-01" max="2040-12-31" data-saisine value="${d.saisine||""}" aria-label="Date de la saisine" style="border:1px solid var(--line);border-radius:10px;padding:6px 9px;background:var(--bg);color:var(--ink)"></label>
       <button class="nc" data-saisine-today>Aujourd’hui</button></div>`:"";
+  const disp=k==="mutuelle"&&d.mut==="dispense"&&!nc;
+  const dispense=disp?`<div class="saisine mut-disp ${d.just&&d.jr?"ok":""}">
+      <span><b style="color:var(--ink)">Dispense : justificatif obligatoire</b></span>
+      <span class="mut-ch">${cb(`data-mutjust="css" aria-label="Justificatif : attestation CSS"`,d.just==="css","Attestation CSS")}${cb(`data-mutjust="perso" aria-label="Justificatif : mutuelle personnelle"`,d.just==="perso","Mutuelle personnelle")}</span>
+      ${d.just==="perso"?`<label>Fin de la mutuelle perso (date anniversaire) <input type="date" min="2000-01-01" max="2040-12-31" data-mutfin value="${a.ech.mutperso.date||""}"></label>`:""}
+      ${d.just?cb(`data-mutjr aria-label="Justificatif reçu"`,!!d.jr,"<b>Justificatif reçu</b>"):""}
+      ${!d.just?`<small style="color:var(--bad)">Choisissez le justificatif fourni par le salarié.</small>`:!d.jr?`<small style="color:var(--bad)">Justificatif à demander au salarié.</small>`:d.just==="css"?`<small>Pensez à suivre la validité dans l’échéance « Attestation CSS ».</small>`:!a.ech.mutperso.date?`<small style="color:var(--bad)">Indiquez la date de fin pour être alerté avant l’échéance.</small>`:`<small>Une alerte apparaîtra 30 jours avant la fin.</small>`}
+    </div>`:"";
   return `<div class="trow ${nc?"is-nc":""} ${d.s==="verifie"?"is-ok":""}">
     <div class="t-doc">${lab}</div>
     <div class="t-pres">${pres}</div>
     <div class="t-com"><input class="com" data-com="${k}" value="${esc(d.c)}" placeholder="Commentaire" aria-label="Commentaire ${lab}"></div>
     <div class="t-nc">${sansNc?"":`<button class="nc" data-nc="${k}" aria-pressed="${nc}" title="Non concerné">N/C</button>`}</div>
-  </div>${saisine}`;
+  </div>${saisine}${dispense}`;
 }
 
 // ---- « La vie du salarié » ----
@@ -1251,6 +1268,10 @@ document.addEventListener("change",ev=>{
     const un=Object.keys(PIECE_T).find(x=>d.types[x]);if(un)d.t=un;
     pieceStatut(d);coche=true}
   if(t.dataset.cl){a.classeur[t.dataset.cl]=t.checked;coche=true}
+  if(t.dataset.mut){const d=a.docs.mutuelle;d.mut=t.checked?t.dataset.mut:"";mutStatut(d);if(!d.mut)d.s="manquant";coche=true}
+  if(t.dataset.mutjust){const d=a.docs.mutuelle;d.just=t.checked?t.dataset.mutjust:"";mutStatut(d);coche=true}
+  if(t.hasAttribute("data-mutjr")){const d=a.docs.mutuelle;d.jr=t.checked;mutStatut(d);coche=true}
+  if(t.hasAttribute("data-mutfin")){a.ech.mutperso.date=t.value;render();push(a);toast(t.value?"Fin de la mutuelle perso enregistrée":"Date retirée");return}
   if(coche){render();if(!checkDone(a))push(a)}
 });
 document.addEventListener("keydown",ev=>{if(ev.key==="Enter"&&ev.target.id==="fNom")document.getElementById("fOk").click()});
