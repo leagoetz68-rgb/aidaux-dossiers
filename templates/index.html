@@ -381,6 +381,10 @@ a.btn{text-decoration:none;display:inline-block}
 .pe-t{border:1px solid var(--line);background:var(--card);border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:14px;color:var(--ink)}
 .pe-t:hover{background:var(--bg)}
 .pe-t.del:hover{background:#FDE8E8;border-color:var(--bad)}
+.ed-cta{display:flex;justify-content:center;margin:-6px 0 14px}
+.ed-pen{background:none;border:none;cursor:pointer;font-size:14px;margin-left:8px;opacity:.45;vertical-align:middle}
+.ed-pen:hover{opacity:1}
+@media print{.ed-cta,.ed-pen{display:none!important}}
 .pe-ed-add{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 4px}
 .pe-zone{position:absolute;border:none;padding:0;background:rgba(255,226,92,.28);border-bottom:2px solid rgba(232,170,0,.55);border-radius:3px;cursor:text}
 .pe-zone:hover,.pe-zone:focus-visible{background:rgba(255,226,92,.55);outline:none}
@@ -980,6 +984,7 @@ function fmHTML(a,k){
     <button class="btn light" data-fm="close">Fermer</button></div>
   <div class="fm-body"><div class="fm-paper">
   <h2 class="fm-h">${esc(def.titre)}</h2><p class="fm-sub">${esc(def.sous)}</p>
+  <div class="ed-cta"><button class="btn ${ED?"teal":"light"}" data-fm="edit">${ED?"✅ Terminer les modifications":"✏️ Modifier / supprimer des questions"}</button></div>
   <table class="fm-id"><tbody>
    <tr><th>Nom et prénom du salarié</th><td>${esc(a.nom)}</td></tr>
    <tr><th>Poste / classification / durée du travail</th><td>${inp("poste")}</td></tr>
@@ -996,7 +1001,7 @@ function fmHTML(a,k){
       s.items.forEach((it,j)=>{const lib=it.type==="rating"?"Grille : "+it.rows.join(" · "):it.type==="plan"?"Tableau : "+it.cols.join(" · "):null;
         h+=`<div class="pe-ed-it">${lib?`<div class="pe-ed-tab">${esc(lib)}</div>`:`<textarea class="fm-in" data-fmet="${i}|${j}" rows="1">${esc(it.t)}</textarea><div class="pe-ed-opt"><span>${it.type==="note"?"Texte d’information":"Question"}</span></div>`}${outil("",i,j,s.items.length)}</div>`});
       h+=`<div class="pe-ed-add"><button class="chip" data-fma="addq|${i}|0">＋ Question</button><button class="chip" data-fma="addn|${i}|0">＋ Texte d’information</button></div></section>`;return}
-    h+=`<section class="fm-sec"><h3>${i+1}. ${esc(fmSansNum(s.t))}</h3>`;
+    h+=`<section class="fm-sec"><h3>${i+1}. ${esc(fmSansNum(s.t))}<button class="ed-pen" data-fm="edit" title="Modifier les questions" aria-label="Modifier les questions">✏️</button></h3>`;
     s.items.forEach((it,j)=>{
       const id=it.id||(i+"."+j);
       if(it.type==="note")h+=`<p class="fm-note">${esc(it.t)}</p>`;
@@ -1566,12 +1571,13 @@ function peFormHTML(){
   const ta=(k,ph)=>`<textarea class="fm-in" data-pev="${esc(k)}" rows="2" placeholder="${ph||""}">${esc(V[k]||"")}</textarea><div class="pr">${esc(V[k]||"")}</div>`;
   const inp=(k,val)=>`<input class="fm-in" data-pev="${esc(k)}" value="${esc(val)}"><div class="pr">${esc(val)}</div>`;
   let h=`<div class="fm-paper"><h2 class="fm-h">${esc(S.titre||"Entretien")}</h2>${S.sous?`<p class="fm-sub">${esc(S.sous)}</p>`:""}
+    <div class="ed-cta"><button class="btn ${ED?"teal":"light"}" data-peedit>${ED?"✅ Terminer les modifications":"✏️ Modifier / supprimer des questions"}</button></div>
     <table class="fm-id"><tbody>${S.ids.map(l=>{const k="id:"+slug(l),val=V[k]!==undefined?V[k]:peIdDefaut(l,a);return `<tr><th>${esc(l)}</th><td>${inp(k,val)}</td></tr>`}).join("")}</tbody></table>`;
   let num=0;
   S.secs.forEach((s,i)=>{const titre=s.sig?s.t:s.t?(++num)+". "+sansNum(s.t):"";
     h+=`<section class="fm-sec">`;
     if(ED&&!s.sig)h+=`<div class="pe-ed-h"><b>${s.t?num+".":""}</b><input class="fm-in" data-pes="${i}" value="${esc(sansNum(s.t))}" placeholder="Titre de la partie">${outils(i,i,S.secs.length,"secdel").replace(/\|(\d+)\|\1"/g,'|$1|$1"').replace(/data-pea="up\|/,'data-pea="secup|').replace(/data-pea="down\|/,'data-pea="secdown|')}</div>`;
-    else if(titre)h+=`<h3>${esc(titre)}</h3>`;
+    else if(titre)h+=`<h3>${esc(titre)}${s.sig?"":`<button class="ed-pen" data-peedit title="Modifier les questions" aria-label="Modifier les questions">✏️</button>`}</h3>`;
     if(ED&&!s.sig){s.items.forEach((it,j)=>{
       h+=`<div class="pe-ed-it">${it.type==="table"?`<div class="pe-ed-tab">Tableau : ${esc(it.cols.join(" · "))}</div>`
         :`<textarea class="fm-in" data-pet="${i}|${j}" rows="1">${esc(it.t)}</textarea>
@@ -1718,7 +1724,7 @@ PEL.addEventListener("mouseup",ev=>{const ta=ev.target;if(ta.tagName!=="TEXTAREA
   if(n&&Math.abs((n.w||0.4)-ta.offsetWidth/W)>0.005){n.w=ta.offsetWidth/W;peSave()}});
 PEL.addEventListener("click",ev=>{
   if(ev.target.id==="peClose"){peFermer();return}
-  if(ev.target.id==="peEdit"){PE.edit=!PE.edit;peAfficher();return}
+  if(ev.target.id==="peEdit"||ev.target.closest("[data-peedit]")){PE.edit=!PE.edit;peAfficher();return}
   const ea=ev.target.closest("[data-pea]");if(ea){peEditOp(...ea.dataset.pea.split("|"));return}
   if(ev.target.id==="pePrint"){if(PE.timer)peFlush();window.print();return}
   const md=ev.target.closest("[data-pemode]");if(md){PE.mode=md.dataset.pemode;peAfficher();return}
