@@ -168,6 +168,11 @@ a.btn{text-decoration:none;display:inline-block}
 .col-list{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:10px;position:sticky;top:12px;max-height:calc(100vh - 24px);display:flex;flex-direction:column}
 .li-search{padding:4px 4px 8px}
 .li-search input{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font:inherit;background:var(--card);color:var(--ink)}
+.cat-badge{display:inline-block;vertical-align:middle;font-family:inherit;font-size:10.5px;font-weight:700;letter-spacing:.02em;padding:1px 7px;border-radius:999px;margin-left:4px}
+.cat-badge.administratif{background:#EDE7FF;color:#5B3FB8}
+.cat-badge.terrain{background:var(--teal-soft);color:var(--teal-ink)}
+.cat-switch{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.cat-switch .chip{padding:4px 10px;font-size:12.5px}
 .li-head{display:flex;gap:6px;flex-wrap:wrap;padding:4px 4px 10px;border-bottom:1px solid var(--line);margin-bottom:6px}
 .li-wrap{overflow-y:auto;display:flex;flex-direction:column;gap:4px}
 .li{display:flex;gap:10px;align-items:center;text-align:left;width:100%;border:1px solid transparent;background:none;border-radius:12px;padding:8px}
@@ -451,7 +456,7 @@ const STATUS_LAB={manquant:"Manquant",recu:"Reçu",verifie:"Vérifié",nc:"Non c
 const labelOf=k=>([...DOCS_OBL,...DOCS_SIGN].find(x=>x[0]===k)||[,k])[1];
 
 let S={arrivees:[],poste:[],feed:[]},LOADED=false,ERR="";
-let UI={acc:{admin:false,vie:false,ent:false},tab:"poste",agence:"Toutes",open:null,editor:null,onlyTodo:true,adding:false,addErr:""};
+let UI={acc:{admin:false,vie:false,ent:false},tab:"poste",agence:"Toutes",cat:"tous",open:null,editor:null,onlyTodo:true,adding:false,addErr:""};
 
 function norm(p){
   p.docs=p.docs||{};[...DOCS_OBL,...DOCS_SIGN].forEach(([k])=>{if(!p.docs[k])p.docs[k]={s:"manquant",c:""}});
@@ -485,7 +490,7 @@ async function load(){
 }
 let chain=Promise.resolve();
 function push(p,news){
-  const body={docs:p.docs,classeur:p.classeur,dates:p.dates,ech:p.ech,vie:p.vie,phase:p.phase,email:p.email||"",embauche:p.embauche||""};
+  const body={docs:p.docs,classeur:p.classeur,dates:p.dates,ech:p.ech,vie:p.vie,phase:p.phase,categorie:catDe(p),email:p.email||"",embauche:p.embauche||""};
   if(news)body.news=news;
   chain=chain.then(()=>api("/api/salaries/"+p.id,{method:"PUT",body:JSON.stringify(body)}))
     .then(j=>{if(j&&j.feed){S.feed=j.feed;renderFeed()}})
@@ -522,7 +527,11 @@ function progress(a){
   DATES.forEach(([k])=>{t++;if(a.dates[k])v++});
   return{v,r,t,done:v===t};
 }
-const byAg=l=>UI.agence==="Toutes"?l:l.filter(p=>p.agence===UI.agence);
+// Catégorie : intervenants terrain / personnel administratif
+const CATS={terrain:"Intervenant terrain",administratif:"Administratif"};
+const catDe=p=>p.categorie==="administratif"?"administratif":"terrain";
+const byAg=l=>(UI.agence==="Toutes"?l:l.filter(p=>p.agence===UI.agence)).filter(p=>UI.cat==="tous"||catDe(p)===UI.cat);
+const badgeCat=p=>`<span class="cat-badge ${catDe(p)}">${catDe(p)==="administratif"?"Administratif":"Terrain"}</span>`;
 
 function ring(pct,col,light){
   const r=28,c=2*Math.PI*r,off=c*(1-pct/100);
@@ -559,6 +568,10 @@ function renderAdd(){
     <label>Nom et prénom<input id="fNom" placeholder="DUPONT Marie" autocomplete="off"></label>
     <label>Date d’embauche<input type="date" min="2000-01-01" max="2040-12-31" id="fEmb"></label>
    </div>
+   <div class="sub" role="radiogroup" aria-label="Catégorie">
+    <button class="tick" data-fcat="terrain" aria-pressed="true">Intervenant terrain</button>
+    <button class="tick" data-fcat="administratif" aria-pressed="false">Personnel administratif</button>
+   </div>
    <div class="sub" role="radiogroup" aria-label="Où le placer">
     <button class="tick" data-ph="arrivee" aria-pressed="true">Nouvelle arrivée : dossier d’embauche à compléter</button>
     <button class="tick" data-ph="poste" aria-pressed="false">Déjà en poste : suivi des renouvellements</button>
@@ -587,7 +600,7 @@ function itemArchive(p){
   const act=UI.open===p.id;
   return `<div class="li-row"><button class="li ${act?"active":""}" data-open="${p.id}" aria-current="${act}">
     <div class="av" style="opacity:.6">${initials(p.nom)}</div>
-    <div class="li-t"><b>${esc(p.nom)}</b><span>${p.archive_le?"Archivé(e) le "+fmt(p.archive_le):"Archivé(e)"}</span></div></button></div>`;
+    <div class="li-t"><b>${esc(p.nom)}${catDe(p)==="administratif"?" "+badgeCat(p):""}</b><span>${p.archive_le?"Archivé(e) le "+fmt(p.archive_le):"Archivé(e)"}</span></div></button></div>`;
 }
 function itemListe(p){
   if(UI.tab==="archives")return itemArchive(p);
@@ -597,7 +610,7 @@ function itemListe(p){
     echListe(p).map(([k,l,th])=>{const s=echSt(p,k,th);return `<i class="dot st-${s.k}" title="${l} : ${s.t}"></i>`}).join("");
   return `<div class="li-row"><button class="li ${act?"active":""}" data-open="${p.id}" aria-current="${act}">
     <div class="av">${initials(p.nom)}</div>
-    <div class="li-t"><b>${esc(p.nom)}</b><span>${p.embauche?"Embauché(e) le "+fmt(p.embauche):"&nbsp;"}${(()=>{const r=!pr.done&&derniereRel(p);return r?" · relancé(e) le "+fmt(r.d)+" ("+(REL_T[r.t]||REL_T.mail)[1].toLowerCase()+")":""})()}</span>
+    <div class="li-t"><b>${esc(p.nom)}${catDe(p)==="administratif"?" "+badgeCat(p):""}</b><span>${p.embauche?"Embauché(e) le "+fmt(p.embauche):"&nbsp;"}${(()=>{const r=!pr.done&&derniereRel(p);return r?" · relancé(e) le "+fmt(r.d)+" ("+(REL_T[r.t]||REL_T.mail)[1].toLowerCase()+")":""})()}</span>
       <div class="li-m"><span class="dots">${dots}</span><span class="mini"><i style="width:${pr.v/pr.t*100}%"></i></span><small>${pr.v}/${pr.t}</small></div></div></button><button class="li-x li-arch" data-archiver="${p.id}" title="Archiver ${esc(p.nom)} (a quitté AID’Aux)" aria-label="Archiver ${esc(p.nom)}">🗄</button><button class="li-x" data-retirer="${p.id}" title="Supprimer ${esc(p.nom)}" aria-label="Supprimer ${esc(p.nom)}">×</button></div>`;
 }
 function listeHTML(l,vide){
@@ -613,7 +626,10 @@ document.addEventListener("input",ev=>{
 });
 function viewSplit(){
   const l=listeOnglet();
-  let head=`<div class="li-search"><input type="search" id="recherche" value="${esc(UI.q||"")}" placeholder="🔍 Rechercher un salarié…" aria-label="Rechercher un salarié" autocomplete="off"></div>`;
+  const base=UI.tab==="archives"?(S.archives||[]):UI.tab==="arrivees"?S.arrivees:S.poste;
+  const nCat=c=>(UI.agence==="Toutes"?base:base.filter(p=>p.agence===UI.agence)).filter(p=>c==="tous"||catDe(p)===c).length;
+  let head=`<div class="li-head li-cat" role="group" aria-label="Catégorie de salariés">${[["tous","Tous"],["terrain","Terrain"],["administratif","Administratifs"]].map(([c,l])=>`<button class="chip" data-cat="${c}" aria-pressed="${UI.cat===c}">${l} (${nCat(c)})</button>`).join("")}</div>`;
+  head+=`<div class="li-search"><input type="search" id="recherche" value="${esc(UI.q||"")}" placeholder="🔍 Rechercher un salarié…" aria-label="Rechercher un salarié" autocomplete="off"></div>`;
   if(UI.tab==="poste"){
     const nTodo=byAg(S.poste).filter(todo).length;
     head+=`<div class="li-head"><button class="chip" data-only="1" aria-pressed="${UI.onlyTodo}">À traiter (${nTodo})</button><button class="chip" data-only="0" aria-pressed="${!UI.onlyTodo}">Tout le monde (${byAg(S.poste).length})</button></div>`;
@@ -927,7 +943,8 @@ function fiche(a){
   const thead=`<div class="trow thead"><div class="t-doc"></div><div class="t-pres">Présent</div><div class="t-com">Commentaires</div><div class="t-ver">Vérifié</div><div class="t-nc"></div></div>`;
   return `<div class="detail">
    <div class="dhead"><button class="ghost back-m" data-back>← Liste</button><div class="av">${initials(a.nom)}</div>
-     <div style="flex:1;min-width:180px"><h2>${esc(a.nom)}</h2><span style="color:var(--ink2);font-size:13px">${a.embauche?"Embauché(e) le "+fmt(a.embauche):""}${a.phase==="arrivee"?" · arrivée en cours":""}</span></div>
+     <div style="flex:1;min-width:180px"><h2>${esc(a.nom)}</h2><span style="color:var(--ink2);font-size:13px">${a.embauche?"Embauché(e) le "+fmt(a.embauche):""}${a.phase==="arrivee"?" · arrivée en cours":""}</span>
+       <div class="cat-switch" role="radiogroup" aria-label="Catégorie">${Object.entries(CATS).map(([c,l])=>`<button class="chip" role="radio" data-setcat="${c}" aria-checked="${catDe(a)===c}" aria-pressed="${catDe(a)===c}">${l}</button>`).join("")}</div></div>
      <b style="font-family:'Baloo 2';font-size:22px" title="Éléments du dossier vérifiés">${p.v} / ${p.t}</b></div>
    <div class="prog"><i class="pv" style="width:${p.v/p.t*100}%"></i><i class="pr" style="width:${p.r/p.t*100}%"></i></div>
 
@@ -990,7 +1007,7 @@ function checkDone(a){
 function find(id){return S.arrivees.find(x=>x.id===id)||S.poste.find(x=>x.id===id)||(S.archives||[]).find(x=>x.id===id)}
 function ficheArchive(a){
   return `<div class="detail"><div class="dhead"><button class="ghost back-m" data-back>← Liste</button><div class="av">${initials(a.nom)}</div>
-    <div><h2 style="margin:0">${esc(a.nom)}</h2><small>${esc(a.agence||"")}${a.embauche?" · embauché(e) le "+fmt(a.embauche):""}${a.archive_le?" · archivé(e) le "+fmt(a.archive_le):""}</small></div></div>
+    <div><h2 style="margin:0">${esc(a.nom)} ${badgeCat(a)}</h2><small>${esc(a.agence||"")}${a.embauche?" · embauché(e) le "+fmt(a.embauche):""}${a.archive_le?" · archivé(e) le "+fmt(a.archive_le):""}</small></div></div>
     <div class="empty" style="margin-top:14px">Ce salarié a quitté AID’Aux : son dossier est conservé ici, sans relances ni alertes.<br><br>
     <button class="chip" data-desarchiver="${a.id}">↩ Désarchiver (retour dans la liste)</button></div></div>`;
 }
@@ -1090,14 +1107,19 @@ document.addEventListener("click",async ev=>{
     UI.imp.ok.forEach(({a,mail})=>{a.email=mail;push(a)});
     UI.imp=null;render();toast(n+" email(s) enregistré(s)");return
   }
+  if(t.dataset.cat){UI.cat=t.dataset.cat;return render()}
+  if(t.dataset.fcat){document.querySelectorAll("[data-fcat]").forEach(b=>b.setAttribute("aria-pressed",b===t));return}
+  if(t.dataset.setcat&&a){if(catDe(a)===t.dataset.setcat)return;a.categorie=t.dataset.setcat;
+    push(a,{txt:a.nom+" : "+(a.categorie==="administratif"?"personnel administratif":"intervenant terrain")});render();toast(first(a.nom)+" → "+CATS[a.categorie]);return}
   if(t.dataset.ph){document.querySelectorAll("[data-ph]").forEach(b=>b.setAttribute("aria-pressed",b===t));return}
   if(t.id==="fCancel"){UI.adding=false;return render()}
   if(t.id==="fOk"){
     const nom=document.getElementById("fNom").value.trim(),agence=AGENCES[0],embauche=document.getElementById("fEmb").value;
     const phase=document.querySelector('[data-ph][aria-pressed="true"]').dataset.ph;
+    const categorie=document.querySelector('[data-fcat][aria-pressed="true"]').dataset.fcat;
     if(!nom){document.getElementById("fErr").textContent="Indiquez le nom et le prénom";return}
     t.disabled=true;
-    try{const j=await api("/api/salaries",{method:"POST",body:JSON.stringify({nom,agence,embauche,phase})});
+    try{const j=await api("/api/salaries",{method:"POST",body:JSON.stringify({nom,agence,embauche,phase,categorie})});
       const p=norm(j.salarie);S.poste.push(p);S.feed=j.feed||S.feed;
       UI.adding=false;UI.tab="poste";UI.onlyTodo=false;UI.open=p.id;render();toast(nom+" ajouté(e)")}
     catch(e){t.disabled=false;document.getElementById("fErr").textContent=e.message}
