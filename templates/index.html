@@ -529,7 +529,7 @@ const XIMI=[
  {n:"09_FIN DE CONTRAT",docs:[],cl:[]}];
 const DATES=[]; // les dates Digiposte (envoi, identifiant, dépôt) ne sont plus suivies
 const PIECE_T={cni:"CNI",titre:"Titre de séjour",passeport:"Passeport"};
-const ECH=[["piece","Pièce d’identité",90],["cpam","Attestation CPAM",30],["medecine","Médecine du travail",60],["permis","Permis de conduire",90],["mutperso","Fin mutuelle perso",30]];
+const ECH=[["piece","Pièce d’identité",90],["cpam","Attestation CSS",30],["medecine","Médecine du travail",60],["permis","Permis de conduire",90],["mutperso","Fin mutuelle perso",30]];
 const STATUS_NEXT={manquant:"recu",recu:"verifie",verifie:"manquant"};
 const STATUS_LAB={manquant:"Manquant",recu:"Reçu",verifie:"Vérifié",nc:"Non concerné"};
 const labelOf=k=>([...DOCS_OBL,...DOCS_SIGN].find(x=>x[0]===k)||[,k])[1];
@@ -597,7 +597,7 @@ const verifie=p=>!!(p.dates&&p.dates.verif);
 //  nouveau (ou rien d’écrit) → date de validité à renseigner ; ancien → validé d’office ; N/C → échéance masquée
 const permisMode=p=>{if((p.docs.permis&&p.docs.permis.s==="nc")||(p.ech.permis&&p.ech.permis.nc))return"nc";
   const c=String((p.docs.permis||{}).c||"").toLowerCase();return /nouveau/.test(c)?"nouveau":/ancien/.test(c)?"ancien":"aucun"};
-// Mutuelle : adhésion, ou dispense avec justificatif (attestation CPAM ou mutuelle perso jusqu'à sa date anniversaire)
+// Mutuelle : adhésion, ou dispense avec justificatif (attestation CSS ou mutuelle perso jusqu'à sa date anniversaire)
 const mutPerso=p=>{const m=p.docs.mutuelle||{};return m.mut==="dispense"&&m.just==="perso"};
 // Ouvre « La vie du salarié » sur la carte de l'échéance et place le curseur dans la date
 function allerEch(ek){UI.acc.vie=true;UI.editor=null;render();
@@ -821,7 +821,7 @@ function ligneDoc(a,k,lab){
   const disp=k==="mutuelle"&&d.mut==="dispense"&&!nc;
   const dispense=disp?`<div class="saisine mut-disp ${d.just&&d.jr?"ok":""}">
       <span><b style="color:var(--ink)">Dispense : justificatif obligatoire</b></span>
-      <span class="mut-ch">${cb(`data-mutjust="css" aria-label="Justificatif : attestation CPAM"`,d.just==="css","Attestation CPAM")}${cb(`data-mutjust="perso" aria-label="Justificatif : mutuelle personnelle"`,d.just==="perso","Mutuelle personnelle")}${cb(`data-mutjust="autre" aria-label="Justificatif : autre"`,d.just==="autre","Autre")}</span>
+      <span class="mut-ch">${cb(`data-mutjust="css" aria-label="Justificatif : attestation CSS"`,d.just==="css","Attestation CSS")}${cb(`data-mutjust="perso" aria-label="Justificatif : mutuelle personnelle"`,d.just==="perso","Mutuelle personnelle")}${cb(`data-mutjust="autre" aria-label="Justificatif : autre"`,d.just==="autre","Autre")}</span>
       ${d.just?cb(`data-mutjr aria-label="Justificatif reçu"`,!!d.jr,"<b>Justificatif reçu</b>"):""}
       ${!d.just?`<small style="color:var(--bad)">Choisissez le justificatif fourni par le salarié.</small>`:!d.jr?`<small style="color:var(--bad)">Justificatif à demander au salarié.</small>`:d.just==="autre"?`<small>Précisez le justificatif dans le commentaire de la ligne Mutuelle.</small>`
         :(()=>{const ek=d.just==="css"?"cpam":"mutperso",dt=a.ech[ek].date;return dt?`<small>Valable jusqu’au ${fmt(dt)} · <button class="lien" data-mutgo="${ek}">modifier la date</button></small>`:`<small style="color:var(--bad)">Date de validité à renseigner · <button class="lien" data-mutgo="${ek}">la saisir</button></small>`})()}
@@ -835,7 +835,7 @@ function ligneDoc(a,k,lab){
 }
 
 // ---- « La vie du salarié » ----
-const VIE=[["css","🧾","Attestation CPAM","cpam"],["medecine","🩺","Visite médecine du travail","medecine"],["mutperso","🛡️","Mutuelle personnelle","mutperso"]];
+const VIE=[["css","🧾","Attestation CSS","cpam"],["medecine","🩺","Visite médecine du travail","medecine"],["mutperso","🛡️","Mutuelle personnelle","mutperso"]];
 const vieListe=a=>VIE.filter(v=>v[0]!=="mutperso"||mutPerso(a));
 VIE.forEach(v=>{v[2]=v[2]}); // libellés
 function accHead(k,ico,titre,sous,badge,st){
@@ -899,7 +899,7 @@ function vieScore(a){
 }
 function vieSection(a){
   const sc=vieScore(a);
-  return `${accHead("vie","🌱","La vie du salarié","Attestation CPAM, médecine du travail",`${sc.ok} / ${sc.t}`,sc.ok===sc.t?"ok":"bad")}
+  return `${accHead("vie","🌱","La vie du salarié","Attestation CSS, médecine du travail",`${sc.ok} / ${sc.t}`,sc.ok===sc.t?"ok":"bad")}
    <div class="acc-body" ${UI.acc.vie?"":"hidden"}><div class="vie-grid">
      ${vieListe(a).map(([k,ico,t,ek])=>carteEch(a,k,ico,t,ek)).join("")}
    </div></div>`;
@@ -1176,7 +1176,7 @@ function fiche(a){
 
    ${accHead("admin","🗂️","Dossier administratif obligatoire","Dossiers Ximi (dont avenants et entretiens)",`${p.v} / ${p.t}${p.v!==p.t&&verifie(a)?" · vérifié":""}`,p.v===p.t?"ok":verifie(a)?"warn":"bad")}
    <div class="acc-body" ${UI.acc.admin?"":"hidden"}><div class="sec dossier">
-     <div class="dates" style="margin-bottom:6px"><label>Date du dossier<input type="date" min="2000-01-01" max="2040-12-31" data-date="dossier" value="${a.dates.dossier||""}"></label><label>Email du salarié <small>(relances titre de séjour &amp; CPAM)</small><input type="email" data-email value="${esc(a.email||"")}" placeholder="prenom.nom@exemple.fr" autocomplete="off"></label></div>
+     <div class="dates" style="margin-bottom:6px"><label>Date du dossier<input type="date" min="2000-01-01" max="2040-12-31" data-date="dossier" value="${a.dates.dossier||""}"></label><label>Email du salarié <small>(relances titre de séjour &amp; CSS)</small><input type="email" data-email value="${esc(a.email||"")}" placeholder="prenom.nom@exemple.fr" autocomplete="off"></label></div>
      ${dossiersXimi(a,thead)}
      ${relancesHTML(a)}
      <div class="verif-box ${verifie(a)?"on":""}">${cb('data-verif',verifie(a),"<b>Dossier vérifié</b> <small>même s’il est incomplet</small>")}
