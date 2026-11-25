@@ -1,11 +1,11 @@
-"""Relances automatiques des titres de séjour et des attestations CSS.
+"""Relances automatiques des titres de séjour et des attestations CPAM.
 
 Appelé une fois par jour par le Cron Vercel (voir vercel.json) :
   - 3 mois avant la fin de validité  → mail de relance au salarié
   - 1 mois avant                     → 2e relance au salarié
   - 15 jours avant (ou déjà expiré)  → alerte par mail à Marie
 
-Même chose pour l'attestation CSS (complémentaire santé solidaire), pour tous
+Même chose pour l'attestation CPAM, pour tous
 les salariés qui ont une date « Valable jusqu'au » renseignée.
 
 Chaque mail n'est envoyé qu'une seule fois par document (table dossiers_relances).
@@ -86,9 +86,9 @@ DOCUMENTS = [
      "fin": "Sans document valable à la date d'échéance, nous ne pourrons malheureusement pas "
             "maintenir votre planning.\n\n",
      "point": "récépissé de demande, nouveau titre"},
-    {"ech": "cpam", "prefixe": "css_", "nom": "attestation CSS", "votre": "votre attestation CSS (complémentaire santé solidaire)",
-     "le": "l'attestation CSS", "nouveau": "votre nouvelle attestation CSS",
-     "Alerte": "Alerte attestation CSS", "suivi": lambda docs: True,
+    {"ech": "cpam", "prefixe": "css_", "nom": "attestation CPAM", "votre": "votre attestation CPAM",
+     "le": "l'attestation CPAM", "nouveau": "votre nouvelle attestation CPAM",
+     "Alerte": "Alerte attestation CPAM", "suivi": lambda docs: True,
      "faire": "demander son renouvellement auprès de votre CPAM (ameli.fr)",
      "fin": "",
      "point": "demande de renouvellement, nouvelle attestation"},
