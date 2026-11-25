@@ -368,6 +368,20 @@ a.btn{text-decoration:none;display:inline-block}
 .pe-q>span:not(.pr){display:block;font-weight:700;font-size:14px;margin-bottom:4px}
 #peForm .fm-paper{margin-bottom:20px}
 .fm-q>span.pr.pe-prc{display:none}
+.pe-ed-h{display:flex;align-items:center;gap:8px;padding-bottom:6px;border-bottom:2px solid var(--teal);margin-bottom:8px}
+.pe-ed-h b{font-family:"Baloo 2",sans-serif;font-size:19px}
+.pe-ed-h .fm-in{font-weight:700;font-size:15px}
+.pe-ed-it{display:grid;grid-template-columns:1fr auto;gap:4px 8px;align-items:start;padding:8px;border:1px dashed var(--line);border-radius:10px;margin:6px 0}
+.pe-ed-it textarea{font-weight:600}
+.pe-ed-opt{grid-column:1;display:flex;gap:14px;font-size:12.5px;color:var(--ink2)}
+.pe-ed-opt label{display:flex;align-items:center;gap:4px;cursor:pointer}
+.pe-ed-it .pe-tools{grid-column:2;grid-row:1 / span 2}
+.pe-ed-tab{font-size:13px;color:var(--ink2);font-style:italic}
+.pe-tools{display:inline-flex;gap:4px;flex:none}
+.pe-t{border:1px solid var(--line);background:var(--card);border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:14px;color:var(--ink)}
+.pe-t:hover{background:var(--bg)}
+.pe-t.del:hover{background:#FDE8E8;border-color:var(--bad)}
+.pe-ed-add{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 4px}
 .pe-zone{position:absolute;border:none;padding:0;background:rgba(255,226,92,.28);border-bottom:2px solid rgba(232,170,0,.55);border-radius:3px;cursor:text}
 .pe-zone:hover,.pe-zone:focus-visible{background:rgba(255,226,92,.55);outline:none}
 .pe-case{position:absolute;border:none;padding:0;background:rgba(255,226,92,.35);border-radius:2px;cursor:pointer;color:#0D1A5A;font-weight:900;line-height:1;display:grid;place-items:center}
@@ -1515,12 +1529,24 @@ function peIdDefaut(lab,a){const anc=fmAnc(a.embauche);
   if(/^date d.embauche/i.test(lab))return a.embauche?fmt(a.embauche)+(anc?" ("+anc+")":""):"";
   return""}
 function peFormHTML(){
-  const a=UI.open&&find(UI.open),S=PE.struct,V=peForm().v;if(!S||!a)return"";
+  const a=UI.open&&find(UI.open),f0=peForm(),S=f0.struct||PE.struct,V=f0.v,ED=!!PE.edit;if(!S||!a)return"";
+  const sansNum=t=>String(t||"").replace(/^\s*\d+\s*[.)]\s*/,"");
+  const outils=(i,j,n,suppr)=>`<span class="pe-tools">${j>0?`<button class="pe-t" data-pea="up|${i}|${j}" title="Monter">↑</button>`:""}${j<n-1?`<button class="pe-t" data-pea="down|${i}|${j}" title="Descendre">↓</button>`:""}<button class="pe-t del" data-pea="${suppr}|${i}|${j}" title="Supprimer">🗑</button></span>`;
   const ta=(k,ph)=>`<textarea class="fm-in" data-pev="${esc(k)}" rows="2" placeholder="${ph||""}">${esc(V[k]||"")}</textarea><div class="pr">${esc(V[k]||"")}</div>`;
   const inp=(k,val)=>`<input class="fm-in" data-pev="${esc(k)}" value="${esc(val)}"><div class="pr">${esc(val)}</div>`;
   let h=`<div class="fm-paper"><h2 class="fm-h">${esc(S.titre||"Entretien")}</h2>${S.sous?`<p class="fm-sub">${esc(S.sous)}</p>`:""}
     <table class="fm-id"><tbody>${S.ids.map(l=>{const k="id:"+slug(l),val=V[k]!==undefined?V[k]:peIdDefaut(l,a);return `<tr><th>${esc(l)}</th><td>${inp(k,val)}</td></tr>`}).join("")}</tbody></table>`;
-  S.secs.forEach(s=>{h+=`<section class="fm-sec">${s.t?`<h3>${esc(s.t)}</h3>`:""}`;
+  let num=0;
+  S.secs.forEach((s,i)=>{const titre=s.sig?s.t:s.t?(++num)+". "+sansNum(s.t):"";
+    h+=`<section class="fm-sec">`;
+    if(ED&&!s.sig)h+=`<div class="pe-ed-h"><b>${s.t?num+".":""}</b><input class="fm-in" data-pes="${i}" value="${esc(sansNum(s.t))}" placeholder="Titre de la partie">${outils(i,i,S.secs.length,"secdel").replace(/\|(\d+)\|\1"/g,'|$1|$1"').replace(/data-pea="up\|/,'data-pea="secup|').replace(/data-pea="down\|/,'data-pea="secdown|')}</div>`;
+    else if(titre)h+=`<h3>${esc(titre)}</h3>`;
+    if(ED&&!s.sig){s.items.forEach((it,j)=>{
+      h+=`<div class="pe-ed-it">${it.type==="table"?`<div class="pe-ed-tab">Tableau : ${esc(it.cols.join(" · "))}</div>`
+        :`<textarea class="fm-in" data-pet="${i}|${j}" rows="1">${esc(it.t)}</textarea>
+        <div class="pe-ed-opt">${it.type==="note"?`<span>Texte d’information</span>`:`<label><input type="checkbox" data-peo="box|${i}|${j}" ${it.box?"checked":""}> case ☐</label><label><input type="checkbox" data-peo="ans|${i}|${j}" ${it.ans?"checked":""}> zone de réponse</label>`}</div>`}
+        ${outils(i,j,s.items.length,"del")}</div>`});
+      h+=`<div class="pe-ed-add"><button class="chip" data-pea="addq|${i}|0">＋ Question</button><button class="chip" data-pea="addn|${i}|0">＋ Texte d’information</button></div></section>`;return}
     s.items.forEach(it=>{
       if(it.type==="note"){h+=`<p class="fm-note">${esc(it.t)}</p>`;return}
       if(it.type==="table"&&it.rows&&it.rows.length){
@@ -1538,19 +1564,41 @@ function peFormHTML(){
     if(s.sig)h+=`<div class="fm-sigs"><div><b>Salarié(e)</b><label>Date<br><input class="fm-in" type="date" min="2000-01-01" max="2040-12-31" data-pev="sig:sd" value="${esc(V["sig:sd"]||"")}"></label><label>Observations éventuelles${ta("sig:so")}</label><div class="fm-sigbox">Signature :</div></div>
       <div><b>Responsable / représentant AID’AUX</b><label>Date<br><input class="fm-in" type="date" min="2000-01-01" max="2040-12-31" data-pev="sig:rd" value="${esc(V["sig:rd"]||"")}"></label><div class="fm-sigbox">Signature :</div></div></div>`;
     h+=`</section>`});
+  if(ED)h+=`<div class="pe-ed-add"><button class="chip" data-pea="addsec|0|0">＋ Nouvelle partie</button></div>`;
   if(!S.secs.some(x=>x.sig))h+=`<section class="fm-sec"><h3>Validation et signatures</h3><div class="fm-sigs"><div><b>Salarié(e)</b><label>Date<br><input class="fm-in" type="date" min="2000-01-01" max="2040-12-31" data-pev="sig:sd" value="${esc(V["sig:sd"]||"")}"></label><label>Observations éventuelles${ta("sig:so")}</label><div class="fm-sigbox">Signature :</div></div>
       <div><b>Responsable / représentant AID’AUX</b><label>Date<br><input class="fm-in" type="date" min="2000-01-01" max="2040-12-31" data-pev="sig:rd" value="${esc(V["sig:rd"]||"")}"></label><div class="fm-sigbox">Signature :</div></div></div></section>`;
   return h+`</div>`;
 }
+function peStructEd(){const f=peForm();if(!f.struct)f.struct=JSON.parse(JSON.stringify(PE.struct));return f.struct}
+function peEditOp(op,i,j){i=+i;j=+j;const S=peStructEd(),sec=S.secs[i],nk=()=>"n:"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  const bouge=(l,a,b)=>{if(b<0||b>=l.length)return;const x=l.splice(a,1)[0];l.splice(b,0,x)};
+  if(op==="del"){const it=sec.items[j];if(it.type!=="note"&&!confirm("Supprimer cette question ?\n\n« "+String(it.t||"").slice(0,120)+" »"))return;sec.items.splice(j,1)}
+  else if(op==="up")bouge(sec.items,j,j-1);
+  else if(op==="down")bouge(sec.items,j,j+1);
+  else if(op==="addq")sec.items.push({type:"q",box:true,ans:true,t:"Nouvelle question",key:nk()});
+  else if(op==="addn")sec.items.push({type:"note",t:"Texte d’information",key:nk()});
+  else if(op==="secdel"){if(!confirm("Supprimer toute la partie « "+String(sec.t||"").slice(0,80)+" » et ses questions ?"))return;S.secs.splice(i,1)}
+  else if(op==="secup"||op==="secdown"){const b=op==="secup"?i-1:i+1;if(S.secs[b]&&!S.secs[b].sig)bouge(S.secs,i,b)}
+  else if(op==="addsec"){const k=S.secs.findIndex(x=>x.sig);const n={t:"Nouvelle partie",items:[{type:"q",box:true,ans:true,t:"Nouvelle question",key:nk()}]};if(k<0)S.secs.push(n);else S.secs.splice(k,0,n)}
+  peSave();peAfficher();
+  if(op.startsWith("add")){const tas=document.querySelectorAll("#peForm [data-pet]");const last=op==="addsec"?document.querySelectorAll("#peForm [data-pes]"):null;
+    const el=op==="addsec"?last[last.length-1]:[...tas].filter(t=>t.dataset.pet.startsWith(i+"|")).pop();if(el){el.focus();el.select&&el.select();el.scrollIntoView({block:"center"})}}
+}
+PEL.addEventListener("input",ev=>{const t=ev.target;if(!t.dataset)return;
+  if(t.dataset.pet){const [i,j]=t.dataset.pet.split("|").map(Number);peStructEd().secs[i].items[j].t=t.value;peAuto(t);peSave()}
+  else if(t.dataset.pes!==undefined){peStructEd().secs[+t.dataset.pes].t=t.value;peSave()}},true);
+PEL.addEventListener("change",ev=>{const t=ev.target;if(!t.dataset||!t.dataset.peo)return;const [o,i,j]=t.dataset.peo.split("|");
+  peStructEd().secs[+i].items[+j][o]=t.checked;peSave()});
 function peAfficher(){
   const corps=document.getElementById("peBody");if(!corps)return;
   document.querySelectorAll("[data-pemode]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.pemode===PE.mode));
   const enPdf=PE.mode==="pdf";
-  document.getElementById("pePrint").hidden=enPdf;document.getElementById("peDl").hidden=!enPdf;
+  document.getElementById("pePrint").hidden=enPdf||!!PE.edit;const be=document.getElementById("peEdit");be.hidden=enPdf;be.textContent=PE.edit?"✅ Terminer les modifications":"✏️ Modifier les questions";be.className=PE.edit?"btn teal":"btn light";document.getElementById("peDl").hidden=!enPdf;
   document.getElementById("peAide").innerHTML=enPdf?"Cliquez sur une zone jaune pour répondre (touche <b>Tab</b> : réponse suivante), ou n’importe où sur la page. Poignée ⠿ : déplacer ; videz un texte pour le supprimer."
+    :PE.edit?"Mode modification : changez le texte, supprimez 🗑 ou déplacez ↑ ↓ les questions. La numérotation des parties se refait toute seule. Les réponses déjà écrites sont conservées."
     :"Formulaire créé automatiquement à partir du PDF. Tout s’enregistre tout seul. Bouton « Imprimer / PDF » pour la version à signer.";
   document.getElementById("peForm").hidden=enPdf;document.getElementById("pePages").hidden=!enPdf;
-  if(!enPdf){const f=document.getElementById("peForm");f.innerHTML=peFormHTML();f.querySelectorAll("textarea").forEach(peAuto)}
+  if(!enPdf){const f=document.getElementById("peForm"),y=document.getElementById("peBody").scrollTop;f.innerHTML=peFormHTML();f.querySelectorAll("textarea").forEach(peAuto);document.getElementById("peBody").scrollTop=y}
   else if(PE.doc&&!PE.pages.length){const box=document.getElementById("pePages");
     for(let i=1;i<=PE.doc.numPages;i++){const pg=document.createElement("div");pg.className="pe-page";pg.dataset.p=i;
       pg.innerHTML=`<canvas></canvas><div class="pe-layer"></div>`;box.appendChild(pg);PE.pages.push(pg)}
@@ -1570,7 +1618,7 @@ async function pdfOuvrir(pid){
   PEL.innerHTML=`<div class="fm-bar"><div class="fm-title"><b>${info?PDF_LIB[info.type]+" "+info.annee:"Entretien"}</b><small>${esc(a?a.nom:"")}</small></div>
     <span class="pe-modes" role="group" aria-label="Affichage"><button class="chip" data-pemode="form" aria-pressed="true">📝 Formulaire</button><button class="chip" data-pemode="pdf" aria-pressed="false">📄 Sur le PDF</button></span>
     <span class="fm-save" id="peSave">Chargement…</span>
-    <button class="btn light" id="pePrint">🖨️ Imprimer / PDF</button><button class="btn light" id="peDl" hidden>⬇️ Télécharger</button><button class="btn teal" id="peClose">Fermer</button></div>
+    <button class="btn light" id="peEdit">✏️ Modifier les questions</button><button class="btn light" id="pePrint">🖨️ Imprimer / PDF</button><button class="btn light" id="peDl" hidden>⬇️ Télécharger</button><button class="btn teal" id="peClose">Fermer</button></div>
     <div class="fm-body" id="peBody"><p class="pe-aide" id="peAide"></p><div id="peForm"></div><div id="pePages" hidden></div></div>`;
   PEL.hidden=false;document.body.classList.add("fm-open");
   try{
@@ -1639,6 +1687,8 @@ PEL.addEventListener("mouseup",ev=>{const ta=ev.target;if(ta.tagName!=="TEXTAREA
   if(n&&Math.abs((n.w||0.4)-ta.offsetWidth/W)>0.005){n.w=ta.offsetWidth/W;peSave()}});
 PEL.addEventListener("click",ev=>{
   if(ev.target.id==="peClose"){peFermer();return}
+  if(ev.target.id==="peEdit"){PE.edit=!PE.edit;peAfficher();return}
+  const ea=ev.target.closest("[data-pea]");if(ea){peEditOp(...ea.dataset.pea.split("|"));return}
   if(ev.target.id==="pePrint"){if(PE.timer)peFlush();window.print();return}
   const md=ev.target.closest("[data-pemode]");if(md){PE.mode=md.dataset.pemode;peAfficher();return}
   const cb=ev.target.closest(".pe-case");if(cb){const pg=cb.closest(".pe-page"),p=+pg.dataset.p,c=pg._cases[+cb.dataset.c],k=peCoche(p,c);
