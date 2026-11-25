@@ -214,8 +214,8 @@ a.btn{text-decoration:none;display:inline-block}
 .cmu{margin-top:4px;font-size:13px;font-weight:600}
 .ptypes{display:flex;flex-direction:column;gap:3px;align-items:flex-start}
 .cl-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:4px 12px}
-.cbx{display:inline-flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;user-select:none}
-.cbx input{position:absolute;opacity:0;width:1px;height:1px}
+.cbx{position:relative;display:inline-flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;user-select:none}
+.cbx input{position:absolute;left:0;top:0;opacity:0;width:1px;height:1px}
 .cbx .box{width:22px;height:22px;border-radius:6px;border:2px solid var(--ink2);background:var(--card);display:grid;place-items:center;flex:none;transition:background .15s,border-color .15s}
 .cbx input:checked+.box{background:var(--ok);border-color:var(--ok)}
 .cbx input:checked+.box::after{content:"";width:6px;height:11px;border:solid #fff;border-width:0 3px 3px 0;transform:rotate(45deg) translate(-1px,-1px)}
@@ -396,6 +396,7 @@ a.btn{text-decoration:none;display:inline-block}
 /* ---- Compte rendu d'entretien ---- */
 .fm{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column;overflow:hidden}
 .fm[hidden]{display:none}
+.fm{overscroll-behavior:contain}
 body.fm-open{overflow:hidden}
 #toast{z-index:70}
 .fm-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 16px;padding-top:calc(10px + env(safe-area-inset-top,0px));background:var(--navy);color:#fff}
@@ -1035,7 +1036,7 @@ function fmOpen(a,k){FM.edit=false;
   ["lieu","pres","poste"].forEach(x=>{if(f[x]===undefined)f[x]=""});
   if(f.per===undefined)f.per=fmPrec(a,k);
   FM.id=a.id;FM.k=k;
-  FMEL.innerHTML=fmHTML(a,k);FMEL.hidden=false;document.body.classList.add("fm-open");
+  FMEL.innerHTML=fmHTML(a,k);FMEL.onscroll=()=>{if(FMEL.scrollTop)FMEL.scrollTop=0};FMEL.hidden=false;document.body.classList.add("fm-open");
   FMEL.querySelectorAll("textarea").forEach(fmSize);
   const b=FMEL.querySelector(".fm-body");if(b)b.scrollTop=0;
 }
@@ -1650,7 +1651,7 @@ async function pdfOuvrir(pid){
     <span class="fm-save" id="peSave">Chargement…</span>
     <button class="btn light" id="peEdit">✏️ Modifier les questions</button><button class="btn light" id="pePrint">🖨️ Imprimer / PDF</button><button class="btn light" id="peDl" hidden>⬇️ Télécharger</button><button class="btn teal" id="peClose">Fermer</button></div>
     <div class="fm-body" id="peBody"><p class="pe-aide" id="peAide"></p><div id="peForm"></div><div id="pePages" hidden></div></div>`;
-  PEL.hidden=false;document.body.classList.add("fm-open");
+  PEL.hidden=false;document.body.classList.add("fm-open");PEL.onscroll=()=>{if(PEL.scrollTop)PEL.scrollTop=0};
   try{
     const [lib,notes,buf]=await Promise.all([pdfjs(),api("/api/pdf/"+pid+"/notes"),fetch("/api/pdf/"+pid).then(r=>{if(!r.ok)throw new Error("erreur "+r.status);return r.arrayBuffer()})]);
     if(PE.id!==pid)return;
