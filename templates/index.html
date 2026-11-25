@@ -530,10 +530,13 @@ function progress(a){
 // Catégorie : intervenants terrain / personnel administratif
 const CATS={terrain:"Intervenant terrain",administratif:"Administratif"};
 const catDe=p=>p.categorie==="administratif"?"administratif":"terrain";
-// État du dossier : à traiter (rien de rempli), en cours (commencé), complet
+// État du dossier : à traiter (rien de rempli), en cours (commencé ou échéance à régler), complet
 const ETATS=[["traiter","À traiter"],["cours","En cours"],["complet","Complet"]];
 function etatDossier(p){const pr=progress(p);
-  if(pr.done)return"complet";
+  // Complet = dossier 22/22 ET toutes les échéances à jour (aucune pastille rouge ou orange)
+  const echOk=echListe(p).every(([k,,th])=>!["vide","bad","warn"].includes(echSt(p,k,th).k));
+  if(pr.done&&echOk)return"complet";
+  if(pr.done)return"cours";
   const rien=[...DOCS_OBL,...DOCS_SIGN].every(([k])=>p.docs[k].s==="manquant"&&!String(p.docs[k].c||"").trim())
     &&CLASSEUR.every(([k])=>!p.classeur[k])&&DATES.every(([k])=>!p.dates[k]);
   return rien?"traiter":"cours";}
