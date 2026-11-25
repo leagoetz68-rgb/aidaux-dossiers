@@ -300,6 +300,9 @@ a.btn{text-decoration:none;display:inline-block}
 .prog .pr{background:transparent!important}
 .cbx .box{border-color:var(--bad)!important;background:var(--bad-soft)!important}
 .cbx input:checked+.box,.t-ver .cbx input:checked+.box{background:var(--ok)!important;border-color:var(--ok)!important}
+/* ligne complète : les options non choisies passent en gris (plus de rouge quand tout est fait) */
+.trow.is-ok .cbx input:not(:checked)+.box,.mut-disp.ok .cbx input:not(:checked)+.box{border-color:var(--line)!important;background:var(--card)!important}
+.trow.is-ok .cbx input:not(:checked)~span,.mut-disp.ok .cbx input:not(:checked)~span{color:var(--ink2);opacity:.7}
 .trow.thead .t-ver,.sec h3{color:var(--ink)!important}
 .av{background:var(--gray-soft)!important;color:var(--ink)!important}
 .li.active{background:var(--gray-soft)!important;border-color:var(--ink2)!important}
