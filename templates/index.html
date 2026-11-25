@@ -956,20 +956,25 @@ const FM_PREC={m3:["m1","Suivi 1 mois"],m6:["m3","Suivi 3 mois"],annuel:["annuel
 function fmEnt(a,k){const e=a.vie.ent[k];if(!e.form||typeof e.form!=="object")e.form={};if(!e.form.v||typeof e.form.v!=="object")e.form.v={};return e.form}
 function fmPrec(a,k){const pr=FM_PREC[k];if(!pr)return"";const e2=a.vie.ent[pr[0]];return e2&&e2.le?pr[1]+" : "+fmt(e2.le):""}
 function fmAnc(emb){if(!emb)return"";const [y,m,d]=emb.split("-").map(Number);let mo=(TODAY.getFullYear()-y)*12+TODAY.getMonth()+1-m;if(TODAY.getDate()<d)mo--;if(mo<0)return"";const A=Math.floor(mo/12),M=mo%12;return[A?A+" an"+(A>1?"s":""):"",(M||!A)?M+" mois":""].filter(Boolean).join(" ")}
-function fmProgress(a,k){const def=FORMS[k],V=(a.vie.ent[k].form||{}).v||{};let n=0,t=0;
-  def.sections.forEach((s,i)=>s.items.forEach((it,j)=>{
+// Questions modifiables : copie du modèle propre à cet entretien (f.def), chaque question garde son identifiant
+function fmDefOf(a,k){const f=a.vie.ent[k].form;return f&&f.def&&f.def.sections?f.def:FORMS[k]}
+function fmDefEd(a,k){const f=fmEnt(a,k);if(!f.def){f.def=JSON.parse(JSON.stringify(FORMS[k]));f.def.sections.forEach((s,i)=>s.items.forEach((it,j)=>{it.id=i+"."+j}))}return f.def}
+const fmSansNum=t=>String(t||"").replace(/^\s*\d+\s*[.)]\s*/,"");
+function fmProgress(a,k){const def=fmDefOf(a,k),V=(a.vie.ent[k].form||{}).v||{};let n=0,t=0;
+  def.sections.forEach((s,i)=>s.items.forEach((it,j)=>{j=it.id?it.id.split(".")[1]:j;i=it.id?it.id.split(".")[0]:i;
     if(it.type==="q"){t++;if((V[i+"."+j]||"").trim())n++}
     else if(it.type==="rating")it.rows.forEach((_,r)=>{t++;if(V[i+"."+j+"."+r+".n"])n++})}));
   return{n,t}}
 function fmHTML(a,k){
-  const def=FORMS[k],f=fmEnt(a,k),V=f.v;
+  const def=fmDefOf(a,k),f=fmEnt(a,k),V=f.v,ED=!!FM.edit;
   const inp=(field,extra="")=>`<input class="fm-in" data-fmf="${field}" value="${esc(f[field]||"")}" ${extra}><div class="pr">${esc(f[field]||"")}</div>`;
   const dat=field=>`<input class="fm-in" type="date" min="2000-01-01" max="2040-12-31" data-fmf="${field}" value="${f[field]||""}">`;
   const ta=(attr,val)=>`<textarea class="fm-in" ${attr} rows="2">${esc(val||"")}</textarea><div class="pr">${esc(val||"")}</div>`;
   const anc=fmAnc(a.embauche);
   let h=`<div class="fm-bar"><div class="fm-title"><b>${esc(def.titre)}</b><small>${esc(a.nom)} · ${esc(a.agence||"")}</small></div>
     <span class="fm-save" id="fmSave">✓ Enregistré automatiquement</span>
-    <button class="btn light" data-fm="print" title="Imprimer ou enregistrer en PDF pour les signatures">🖨️ Imprimer / PDF</button>
+    <button class="btn ${ED?"teal":"light"}" data-fm="edit">${ED?"✅ Terminer les modifications":"✏️ Modifier les questions"}</button>
+    ${ED?"":`<button class="btn light" data-fm="print" title="Imprimer ou enregistrer en PDF pour les signatures">🖨️ Imprimer / PDF</button>`}
     <button class="btn teal" data-fm="done">✅ Entretien terminé</button>
     <button class="btn light" data-fm="close">Fermer</button></div>
   <div class="fm-body"><div class="fm-paper">
@@ -983,10 +988,16 @@ function fmHTML(a,k){
    <tr><th>Personne(s) présente(s)</th><td>${inp("pres")}</td></tr>
    <tr><th>Période concernée / entretien précédent</th><td>${inp("per")}</td></tr>
   </tbody></table>`;
+  if(ED)h+=`<p class="fm-note" style="background:var(--teal-soft);padding:8px 10px;border-radius:8px">Mode modification : changez le texte, supprimez 🗑 ou déplacez ↑ ↓ les questions. La numérotation des parties se refait toute seule. Les réponses déjà écrites sont conservées.</p>`;
+  const outil=(op,i,j,n)=>`<span class="pe-tools">${j>0?`<button class="pe-t" data-fma="${op}up|${i}|${j}" title="Monter">↑</button>`:""}${j<n-1?`<button class="pe-t" data-fma="${op}down|${i}|${j}" title="Descendre">↓</button>`:""}<button class="pe-t del" data-fma="${op}del|${i}|${j}" title="Supprimer">🗑</button></span>`;
   def.sections.forEach((s,i)=>{
-    h+=`<section class="fm-sec"><h3>${esc(s.t)}</h3>`;
+    if(ED){h+=`<section class="fm-sec"><div class="pe-ed-h"><b>${i+1}.</b><input class="fm-in" data-fmes="${i}" value="${esc(fmSansNum(s.t))}">${outil("s",i,i,def.sections.length)}</div>`;
+      s.items.forEach((it,j)=>{const lib=it.type==="rating"?"Grille : "+it.rows.join(" · "):it.type==="plan"?"Tableau : "+it.cols.join(" · "):null;
+        h+=`<div class="pe-ed-it">${lib?`<div class="pe-ed-tab">${esc(lib)}</div>`:`<textarea class="fm-in" data-fmet="${i}|${j}" rows="1">${esc(it.t)}</textarea><div class="pe-ed-opt"><span>${it.type==="note"?"Texte d’information":"Question"}</span></div>`}${outil("",i,j,s.items.length)}</div>`});
+      h+=`<div class="pe-ed-add"><button class="chip" data-fma="addq|${i}|0">＋ Question</button><button class="chip" data-fma="addn|${i}|0">＋ Texte d’information</button></div></section>`;return}
+    h+=`<section class="fm-sec"><h3>${i+1}. ${esc(fmSansNum(s.t))}</h3>`;
     s.items.forEach((it,j)=>{
-      const id=i+"."+j;
+      const id=it.id||(i+"."+j);
       if(it.type==="note")h+=`<p class="fm-note">${esc(it.t)}</p>`;
       else if(it.type==="q")h+=`<label class="fm-q"><span>${esc(it.t)}</span>${ta(`data-fmv="${id}"`,V[id])}</label>`;
       else if(it.type==="rating"){
@@ -1002,6 +1013,7 @@ function fmHTML(a,k){
         h+=`</tbody></table></div>`}
     });
     h+=`</section>`});
+  if(ED)h+=`<div class="pe-ed-add"><button class="chip" data-fma="addsec|0|0">＋ Nouvelle partie</button></div>`;
   h+=`<section class="fm-sec"><h3>Validation et signatures</h3><p class="fm-note">${esc(def.sign)}</p>
    <div class="fm-sigs"><div><b>Salarié(e)</b><label>Date<br>${dat("sd")}</label><label>Observations éventuelles${ta('data-fmf="so"',f.so)}</label><div class="fm-sigbox">Signature :</div></div>
    <div><b>Responsable / représentant AID’AUX</b><label>Date<br>${dat("rd")}</label><div class="fm-sigbox">Signature :</div></div></div></section>
@@ -1015,7 +1027,9 @@ const fmSaved=t=>{const el=document.getElementById("fmSave");if(el)el.textConten
 function fmSchedule(){fmSaved("Enregistrement…");clearTimeout(fmTimer);fmTimer=setTimeout(fmFlush,700)}
 function fmFlush(){clearTimeout(fmTimer);fmTimer=null;const a=fmCur();if(!a)return;push(a);fmSaved("✓ Enregistré automatiquement")}
 const fmSize=t=>{t.style.height="auto";t.style.height=Math.max(t.scrollHeight+2,48)+"px"};
-function fmOpen(a,k){
+function fmRedessiner(){const a=fmCur();if(!a)return;const c=FMEL.querySelector(".fm-body"),y=c?c.scrollTop:0;
+  FMEL.innerHTML=fmHTML(a,FM.k);const c2=FMEL.querySelector(".fm-body");if(c2)c2.scrollTop=y;FMEL.querySelectorAll("textarea").forEach(x=>{x.style.height="auto";x.style.height=x.scrollHeight+"px"})}
+function fmOpen(a,k){FM.edit=false;
   const f=fmEnt(a,k),e=a.vie.ent[k];
   if(f.d===undefined)f.d=e.le||e.rdv||fmIso(TODAY);
   ["lieu","pres","poste"].forEach(x=>{if(f[x]===undefined)f[x]=""});
@@ -1044,6 +1058,8 @@ document.addEventListener("click",ev=>{
 FMEL.addEventListener("input",ev=>{
   const t=ev.target,a=fmCur();if(!a)return;ev.stopPropagation();
   const f=fmEnt(a,FM.k);
+  if(t.dataset.fmet){const [i,j]=t.dataset.fmet.split("|").map(Number);fmDefEd(a,FM.k).sections[i].items[j].t=t.value;fmSchedule();return}
+  if(t.dataset.fmes!==undefined){fmDefEd(a,FM.k).sections[+t.dataset.fmes].t=t.value;fmSchedule();return}
   if(t.dataset.fmv!==undefined)f.v[t.dataset.fmv]=t.value;
   else if(t.dataset.fmf&&t.type!=="date")f[t.dataset.fmf]=t.value;
   else return;
@@ -1065,7 +1081,21 @@ FMEL.addEventListener("click",ev=>{
   if(r){const V=fmEnt(a,FM.k).v,key=r.dataset.fmr;
     if(V[key]===r.value){V[key]="";setTimeout(()=>{r.checked=false},0)}else V[key]=r.value;
     fmSchedule();return}
+  const op=t.closest("button[data-fma]");
+  if(op){let [o,i,j]=op.dataset.fma.split("|");i=+i;j=+j;const D=fmDefEd(a,FM.k),sec=D.sections[i],nid=()=>"n"+Date.now().toString(36)+"."+Math.random().toString(36).slice(2,6);
+    const bouge=(l,x,y)=>{if(y<0||y>=l.length)return;l.splice(y,0,l.splice(x,1)[0])};
+    if(o==="del"){const it=sec.items[j];if(it.type!=="note"&&!confirm("Supprimer cette question ?\n\n« "+String(it.t||(it.rows||it.cols||[]).join(", ")).slice(0,120)+" »"))return;sec.items.splice(j,1)}
+    else if(o==="up")bouge(sec.items,j,j-1);else if(o==="down")bouge(sec.items,j,j+1);
+    else if(o==="addq")sec.items.push({type:"q",t:"Nouvelle question",id:nid()});
+    else if(o==="addn")sec.items.push({type:"note",t:"Texte d’information",id:nid()});
+    else if(o==="sdel"){if(!confirm("Supprimer toute la partie « "+fmSansNum(sec.t).slice(0,80)+" » et ses questions ?"))return;D.sections.splice(i,1)}
+    else if(o==="sup")bouge(D.sections,i,i-1);else if(o==="sdown")bouge(D.sections,i,i+1);
+    else if(o==="addsec")D.sections.push({t:"Nouvelle partie",items:[{type:"q",t:"Nouvelle question",id:nid()}]});
+    fmSchedule();fmRedessiner();
+    if(o.startsWith("add")){const l=[...FMEL.querySelectorAll(o==="addsec"?"[data-fmes]":`[data-fmet^="${i}|"]`)].pop();if(l){l.focus();l.select&&l.select();l.scrollIntoView({block:"center"})}}
+    return}
   const b=t.closest("button[data-fm]");if(!b)return;
+  if(b.dataset.fm==="edit"){FM.edit=!FM.edit;fmRedessiner();return}
   if(b.dataset.fm==="close")fmClose();
   else if(b.dataset.fm==="print"){fmFlush();window.print()}
   else if(b.dataset.fm==="done")fmDone();
