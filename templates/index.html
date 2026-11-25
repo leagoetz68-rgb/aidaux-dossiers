@@ -896,7 +896,7 @@ function carteAvenants(a){
 // entretien. Une échéance encore valide (même si la date approche) est à jour.
 function vieScore(a){
   let ok=0,t=0;
-  vieListe(a).forEach(([k,,,ek])=>{t++;const th=ECH.find(x=>x[0]===ek)[2],s=echStatus(a.ech[ek],th).k;if(s==="ok"||s==="nc"||s==="warn")ok++});
+  vieListe(a).forEach(([k,,,ek])=>{t++;const th=ECH.find(x=>x[0]===ek)[2],s=echStatus(a.ech[ek],th).k;if(s==="ok"||s==="nc"||s==="warn"||s==="rdv")ok++});
   return{ok,t};
 }
 function vieSection(a){
