@@ -571,13 +571,16 @@ async function api(url,opt={}){
 }
 async function load(){
   try{const j=await api("/api/etat");S.feed=j.feed||[];S.arrivees=[];S.poste=[];S.archives=(j.archives||[]).map(norm);
-    (j.salaries||[]).map(norm).forEach(p=>S.poste.push(p));LOADED=true;ERR=""}
+    (j.salaries||[]).map(norm).forEach(p=>{p._etat=etatDossier(p);S.poste.push(p)});LOADED=true;ERR=""}
   catch(e){if(e.message!=="login")ERR=e.message}
   render();
 }
 let chain=Promise.resolve();
 function push(p,news){
   p.manquants=manquants(p);
+  // 🎉 confettis quand un dossier devient complet
+  const avant=p._etat;p._etat=etatDossier(p);
+  if(avant&&avant!=="complet"&&p._etat==="complet"&&!p.archive){setTimeout(()=>{confetti();toast("🎉 Dossier de "+first(p.nom)+" complet !")},250)}
   const body={manquants:p.manquants,docs:p.docs,classeur:p.classeur,dates:p.dates,ech:p.ech,vie:p.vie,phase:p.phase,categorie:catDe(p),email:p.email||"",embauche:p.embauche||""};
   if(news)body.news=news;
   chain=chain.then(()=>api("/api/salaries/"+p.id,{method:"PUT",body:JSON.stringify(body)}))
