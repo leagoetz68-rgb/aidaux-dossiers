@@ -1,7 +1,11 @@
 """
 Client minimal pour l'API Ximi V2 (Xelya) - apps Aid'Aux.
 
-Variables d'environnement (Vercel / Render) :
+Variables d'environnement (Vercel / Render) — deux façons possibles :
+  A) clé prête à l'emploi :
+  XIMI_API_KEY      -> clé API Ximi, envoyée telle quelle dans le header Api-Key
+  XIMI_BASE_URL     -> adresse de l'API (ex. https://api.ximi.xelya.io/Ximi3)
+  B) clé signée (JWT généré par l'appli) :
   XIMI_API_KEY_ID   -> identifiant de clé fourni par Xelya (format a067d785-....)
   XIMI_PRIVATE_KEY  -> contenu complet de la clé privée PEM (BEGIN ... END inclus)
   XIMI_BASE_URL     -> optionnel, défaut https://api.ximi.xelya.io/Ximi3
@@ -29,6 +33,9 @@ def _private_key():
 
 def _api_key():
     """Génère (ou réutilise) le JWT signé RS512 à mettre dans le header Api-Key."""
+    cle_directe = os.environ.get("XIMI_API_KEY", "").strip()
+    if cle_directe and not os.environ.get("XIMI_PRIVATE_KEY"):
+        return cle_directe
     now = int(time.time())
     if _cache["token"] and _cache["exp"] - now > 60:
         return _cache["token"]
@@ -55,6 +62,18 @@ def get(path, params=None, timeout=30):
         # On garde le message renvoyé par Ximi : il explique souvent la cause
         raise Exception(f"{r.status_code} {r.reason} - reponse Ximi : {r.text[:500]}")
     return r.json()
+
+
+def put(path, body, timeout=30):
+    """PUT JSON. path ex : 'api/agents/123/notes'."""
+    url = f"{BASE_URL}/{path.lstrip('/')}"
+    r = requests.put(url, headers=_headers(), json=body, timeout=timeout)
+    if r.status_code >= 400:
+        raise Exception(f"{r.status_code} {r.reason} - reponse Ximi : {r.text[:500]}")
+    try:
+        return r.json()
+    except ValueError:
+        return {}
 
 
 def get_all(path, params=None, page_size=1000):
