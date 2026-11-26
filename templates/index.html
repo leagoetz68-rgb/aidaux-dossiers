@@ -1437,7 +1437,15 @@ document.addEventListener("change",ev=>{
   const t=ev.target;
   if(t.type==="date"&&(t.dataset.saisie||(t.value&&horsBornes(t))))return; // saisie en cours
   const a=UI.open&&find(UI.open);if(!a)return;
-  if(t.dataset.com){a.docs[t.dataset.com].c=t.value;if(t.dataset.com==="permis"){UI.editor=null;render()}push(a);return}
+  if(t.dataset.com){a.docs[t.dataset.com].c=t.value;
+    if(t.dataset.com==="permis"){UI.editor=null;
+      // « nouveau » permis : il a une date de validité → on ouvre directement la saisie de la date
+      if(permisMode(a)==="nouveau"&&!(a.ech.permis||{}).date){UI.editor={id:a.id,k:"permis"};render();
+        const ed=document.querySelector(".editor");if(ed){ed.scrollIntoView({behavior:"smooth",block:"center"});ed.classList.add("flash");setTimeout(()=>ed.classList.remove("flash"),1500);
+          const d=document.getElementById("edDate");if(d)setTimeout(()=>d.focus({preventScroll:true}),400)}
+        toast("Nouveau permis : indiquez sa date de validité");push(a);return}
+      render()}
+    push(a);return}
   // CMU : simple information, ne compte pas dans le dossier complet
   if(t.dataset.viec){a.vie[t.dataset.viec].c=t.value;push(a);return}
   if(t.dataset.entc){a.vie.ent[t.dataset.entc].c=t.value;push(a);return}
