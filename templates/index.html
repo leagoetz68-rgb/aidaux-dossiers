@@ -390,6 +390,7 @@ a.btn{text-decoration:none;display:inline-block}
 .sig-tools{display:flex;gap:6px;padding:6px;border-top:1px dashed var(--line)}
 .sig-in{flex:1;min-width:0;border:1px solid var(--line);border-radius:8px;padding:5px 8px;font:inherit;font-size:13px;background:var(--bg);color:var(--ink)}
 @media print{.sig-tools,.sig-ph{display:none!important}.sig{border:1px solid #999}}
+.mails-q{flex:1 1 100%;border:1px solid var(--line);border-radius:8px;padding:7px 10px;font:inherit;font-size:13.5px;background:var(--bg);color:var(--ink)}
 .rel-aide{margin:6px 0 0;font-size:12.5px;color:var(--ink2)}
 .ed-cta{display:flex;justify-content:center;margin:-6px 0 14px}
 .ed-pen{background:none;border:none;cursor:pointer;font-size:14px;margin-left:8px;opacity:.45;vertical-align:middle}
@@ -481,7 +482,7 @@ textarea.fm-in{resize:vertical;min-height:48px;overflow:hidden;display:block}
       <p id="today"></p>
     </div>
     <span class="who-me">{{ user_email }}</span>
-    <button class="btn light" id="impBtn" title="Récupérer les emails des salariés depuis Ximi">📥 Emails Ximi</button><button class="btn light" id="xjBtn" title="Noter maintenant dans le Journal Ximi ce qui manque (sinon c’est fait automatiquement chaque matin)">🔄 Journal Ximi</button><input type="file" id="impFile" accept=".xlsx,.xls,.csv" hidden>
+    <button class="btn light" id="impBtn" title="Récupérer les emails des salariés depuis Ximi">📥 Emails Ximi</button><button class="btn light" id="mailsBtn" title="Historique de tous les mails de rappel envoyés">📨 Mails envoyés</button><button class="btn light" id="xjBtn" title="Noter maintenant dans le Journal Ximi ce qui manque (sinon c’est fait automatiquement chaque matin)">🔄 Journal Ximi</button><input type="file" id="impFile" accept=".xlsx,.xls,.csv" hidden>
     <button class="btn teal" id="addBtn">+ Ajouter un salarié</button>
     <a class="ghost" href="/logout">Se déconnecter</a>
   </div>
@@ -1898,6 +1899,31 @@ document.addEventListener("click",async ev=>{const b=ev.target.closest&&ev.targe
     toast(j.notes+" note(s) ajoutée(s) dans Ximi"+(j.introuvables.length?" · introuvables dans Ximi : "+j.introuvables.slice(0,5).join(", ")+(j.introuvables.length>5?"…":""):"")+(j.erreurs.length?" · erreur : "+j.erreurs[0]:""))}
   catch(e){if(e.message!=="login")toast("Ximi : "+e.message)}
   finally{b.disabled=false;b.textContent=lib}});
+// ---- Historique des mails de rappel envoyés ----
+let MAILS=null,MAILS_F="tous",MAILS_Q="";
+async function ouvrirMails(){
+  let el=document.getElementById("rdvPanel");
+  if(!el){el=document.createElement("div");el.id="rdvPanel";el.className="rdv-ov";document.body.appendChild(el)}
+  el.hidden=false;document.body.classList.add("fm-open");
+  if(!MAILS){el.innerHTML=`<div class="rdv-box"><div class="rdv-h"><h3>📨 Mails envoyés</h3><button class="btn light" data-rdvclose>Fermer</button></div><div class="empty small">Chargement…</div></div>`;
+    try{MAILS=(await api("/api/relances/historique")).lignes||[]}catch(e){if(e.message!=="login")toast("Historique indisponible : "+e.message);fermerRdv();return}}
+  dessinerMails()}
+function dessinerMails(){const el=document.getElementById("rdvPanel");if(!el||el.hidden)return;
+  const types=["tous",...new Set(MAILS.map(m=>m.doc))];
+  const l=MAILS.filter(m=>(MAILS_F==="tous"||m.doc===MAILS_F)&&(!MAILS_Q||sansAcc(m.nom+" "+m.a).includes(sansAcc(MAILS_Q).trim())));
+  el.innerHTML=`<div class="rdv-box" role="dialog" aria-modal="true" aria-label="Mails envoyés">
+    <div class="rdv-h"><h3>📨 Mails de rappel envoyés (${l.length})</h3><button class="btn light" data-rdvclose>Fermer</button></div>
+    <div class="todo-f"><input type="search" id="mailsQ" class="mails-q" placeholder="🔍 Rechercher un salarié ou une adresse…" value="${esc(MAILS_Q)}">
+      ${types.map(t=>`<button class="chip" data-mailsf="${esc(t)}" aria-pressed="${MAILS_F===t}">${t==="tous"?"Tous":esc(t)} (${t==="tous"?MAILS.length:MAILS.filter(m=>m.doc===t).length})</button>`).join("")}</div>
+    <div class="rdv-list">${l.length?l.map(m=>`<button class="rdv-li" data-rdvopen="${m.sid}">
+      <span class="rdv-d"><b>${fmt(m.le.slice(0,10))}</b><small>${m.le.slice(11)}</small></span>
+      <span class="rdv-t"><b>${esc(m.nom)}</b><small>${esc(m.doc)} · ${esc(m.quoi)}${m.echeance?" · échéance du "+fmt(m.echeance):""}</small><small>✉️ ${esc(m.a)}</small></span><span aria-hidden="true">›</span></button>`).join("")
+      :`<div class="empty small">${MAILS.length?"Aucun mail ne correspond.":"Aucun mail de rappel envoyé pour l’instant."}</div>`}</div></div>`;
+  const q=document.getElementById("mailsQ");if(q&&MAILS_Q){q.focus();q.setSelectionRange(q.value.length,q.value.length)}}
+document.addEventListener("click",ev=>{const t=ev.target.closest&&ev.target.closest("#mailsBtn,[data-mailsf]");if(!t)return;
+  if(t.id==="mailsBtn"){MAILS=null;MAILS_F="tous";MAILS_Q="";ouvrirMails();return}
+  MAILS_F=t.dataset.mailsf;dessinerMails()});
+document.addEventListener("input",ev=>{if(ev.target.id!=="mailsQ")return;MAILS_Q=ev.target.value;dessinerMails()});
 render();load();
 </script>
 {% endraw %}
