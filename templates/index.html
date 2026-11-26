@@ -612,7 +612,9 @@ function allerEch(ek){UI.acc.vie=true;UI.editor=null;render();
   el.scrollIntoView({behavior:"smooth",block:"center"});el.classList.add("flash");setTimeout(()=>el.classList.remove("flash"),1500);
   const inp=el.querySelector(`[data-echd="${ek}|date"]`);if(inp)setTimeout(()=>inp.focus({preventScroll:true}),400)}
 function mutStatut(d){if(!d.mut)return;d.s=d.mut==="adhesion"||(d.mut==="dispense"&&d.just&&d.jr)?"verifie":"manquant"}
-const echListe=p=>ECH.filter(([k])=>(k!=="permis"||permisMode(p)!=="nc")&&(k!=="mutperso"||mutPerso(p)));
+// Adhésion à la mutuelle : l'attestation est demandée une fois, sans date de validité → pas d'échéance
+const mutAdhesion=p=>((p.docs||{}).mutuelle||{}).mut==="adhesion";
+const echListe=p=>ECH.filter(([k])=>(k!=="permis"||permisMode(p)!=="nc")&&(k!=="mutperso"||mutPerso(p))&&(k!=="cpam"||!mutAdhesion(p)));
 const echSt=(p,k,th)=>k==="permis"&&permisMode(p)==="ancien"?{k:"ok",t:"Ancien permis",s:"sans date de validité"}:echStatus(p.ech[k],th);
 const todo=p=>(!progress(p).done&&!verifie(p))||echListe(p).some(([k,,th])=>["vide","bad","warn"].includes(echSt(p,k,th).k));
 function progress(a){
@@ -843,7 +845,7 @@ function ligneDoc(a,k,lab){
 
 // ---- « La vie du salarié » ----
 const VIE=[["css","🧾","Attestation CSS","cpam"],["medecine","🩺","Visite médecine du travail","medecine"],["mutperso","🛡️","Mutuelle personnelle","mutperso"]];
-const vieListe=a=>VIE.filter(v=>v[0]!=="mutperso"||mutPerso(a));
+const vieListe=a=>VIE.filter(v=>(v[0]!=="mutperso"||mutPerso(a))&&(v[0]!=="css"||!mutAdhesion(a)));
 VIE.forEach(v=>{v[2]=v[2]}); // libellés
 function accHead(k,ico,titre,sous,badge,st){
   const op=!!UI.acc[k];
