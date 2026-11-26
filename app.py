@@ -32,7 +32,7 @@ auth.proteger(app, endpoints_publics={"relances.cron_relances"})
 AGENCES = ["Cronenbourg", "Vendenheim", "Personnel administratif"]
 PHASES = {"arrivee", "poste"}
 # Catégorie de salarié : intervenant terrain (par défaut) ou personnel administratif
-CATEGORIES = {"terrain", "administratif"}
+CATEGORIES = {"terrain", "administratif", "mixte"}  # mixte = terrain + administratif
 # Salariés administratifs connus (noms de famille), classés automatiquement une
 # fois. Ensuite la catégorie se change à la main dans la fiche du salarié.
 ADMINISTRATIFS_INITIAUX = ["goetz", "mischel", "pouillaude", "suplon", "soulliez", "fux"]
