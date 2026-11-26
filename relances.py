@@ -305,16 +305,19 @@ def lancer_relances(aujourdhui=None):
 
 
 # ---- Rappel visite médecine du travail : 7 jours avant le RDV ----
-RAPPEL_MEDECINE_JOURS = 7
+# Rappels de visite médicale : uniquement quand un RDV est pris, 15 jours avant puis la veille
+RAPPELS_MEDECINE = [("medecine_1j", 1), ("medecine_15j", 15)]  # du plus urgent au moins urgent
 
 
-def _mail_medecine(s, rdv):
+def _mail_medecine(s, rdv, palier="medecine_15j"):
     prenom = s["nom"].split()[-1].capitalize() if s["nom"].split() else ""
-    sujet = "Rappel : votre visite médicale du travail"
+    demain = palier == "medecine_1j"
+    sujet = "Rappel : votre visite médicale du travail demain" if demain else "Rappel : votre visite médicale du travail"
     corps = (
         f"Bonjour {prenom},\n\n"
-        f"Nous vous rappelons que vous avez rendez-vous pour votre visite médicale du travail "
-        f"le {_fmt(rdv)}.\n\n"
+        + (f"Nous vous rappelons que vous avez rendez-vous demain, le {_fmt(rdv)}, pour votre visite médicale du travail.\n\n"
+           if demain else
+           f"Nous vous rappelons que vous avez rendez-vous pour votre visite médicale du travail le {_fmt(rdv)}.\n\n") +
         "Merci de bien vous y présenter. En cas d'empêchement, prévenez le service administratif "
         "au plus vite afin de reprogrammer le rendez-vous.\n\n"
         "Bonne journée,\nLe service administratif AID'Aux"
@@ -338,35 +341,43 @@ def lancer_rappels_medecine(aujourdhui=None):
                 except ValueError:
                     continue
                 jours = (rdv - aujourdhui).days
-                if not 0 <= jours <= RAPPEL_MEDECINE_JOURS:
+                if jours < 0:
+                    continue
+                # palier dû : la veille (0-1 jour) ou 15 jours avant (2-15 jours) ; rien au-delà de 15 jours
+                palier = next((c for c, n in RAPPELS_MEDECINE if jours <= n), None)
+                if not palier:
                     continue
                 cur.execute(
                     "SELECT 1 FROM dossiers_relances WHERE salarie_id=%s AND date_validite=%s AND palier=%s",
-                    (s["id"], rdv, "medecine_7j"),
+                    (s["id"], rdv, palier),
                 )
                 if cur.fetchone():
                     continue
                 dest = s["email"].strip()
                 try:
-                    sujet, corps = _mail_medecine(s, rdv)
+                    sujet, corps = _mail_medecine(s, rdv, palier)
                     _envoyer(dest, sujet, corps, bcc=COPIE_RH or None)
                 except Exception as err:
-                    rapport.append({"salarie": s["nom"], "palier": "medecine_7j", "erreur": str(err)})
+                    rapport.append({"salarie": s["nom"], "palier": palier, "erreur": str(err)})
                     continue
-                cur.execute(
-                    """INSERT INTO dossiers_relances (salarie_id, date_validite, palier, envoye_a)
-                       VALUES (%s, %s, %s, %s) ON CONFLICT DO NOTHING""",
-                    (s["id"], rdv, "medecine_7j", dest),
-                )
+                # le rappel des 15 jours est marqué fait aussi quand on envoie directement celui de la veille
+                for c, n in RAPPELS_MEDECINE:
+                    if n >= dict(RAPPELS_MEDECINE)[palier]:
+                        cur.execute(
+                            """INSERT INTO dossiers_relances (salarie_id, date_validite, palier, envoye_a)
+                               VALUES (%s, %s, %s, %s) ON CONFLICT DO NOTHING""",
+                            (s["id"], rdv, c, dest if c == palier else None),
+                        )
+                quand = "la veille" if palier == "medecine_1j" else "15 jours avant"
                 _noter_relance(cur, s["id"], aujourdhui,
-                               f"Rappel automatique : visite médecine du travail du {_fmt(rdv)}")
+                               f"Rappel automatique ({quand}) : visite médecine du travail du {_fmt(rdv)}")
                 cur.execute(
                     "INSERT INTO dossiers_feed (texte, couleur, auteur) VALUES (%s, %s, %s)",
-                    (f"Rappel visite médicale du {_fmt(rdv)} envoyé à {s['nom']}"[:300], "coral",
+                    (f"Rappel visite médicale du {_fmt(rdv)} ({quand}) envoyé à {s['nom']}"[:300], "coral",
                      "relance automatique"),
                 )
                 conn.commit()
-                rapport.append({"salarie": s["nom"], "palier": "medecine_7j", "envoye_a": dest, "jours": jours})
+                rapport.append({"salarie": s["nom"], "palier": palier, "envoye_a": dest, "jours": jours})
     finally:
         conn.close()
     return rapport
@@ -377,7 +388,8 @@ def _libelle_palier(p):
     doc = "Attestation CSS" if p.startswith("css_") else "Médecine du travail" if p.startswith("medecine") else "Titre de séjour"
     code = p.replace("css_", "")
     quoi = {"relance_3m": "1re relance (3 mois avant)", "relance_1m": "2e relance (1 mois avant)",
-            "alerte_15j": "Alerte interne (15 jours avant)", "medecine_7j": "Rappel du RDV (7 jours avant)"}.get(code, code)
+            "alerte_15j": "Alerte interne (15 jours avant)", "medecine_7j": "Rappel du RDV (7 jours avant)",
+            "medecine_15j": "Rappel du RDV (15 jours avant)", "medecine_1j": "Rappel du RDV (la veille)"}.get(code, code)
     return doc, quoi
 
 
