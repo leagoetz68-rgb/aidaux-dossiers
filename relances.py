@@ -372,6 +372,39 @@ def lancer_rappels_medecine(aujourdhui=None):
     return rapport
 
 
+# ---- Historique des mails de rappel envoyés (écran « Mails envoyés ») ----
+def _libelle_palier(p):
+    doc = "Attestation CSS" if p.startswith("css_") else "Médecine du travail" if p.startswith("medecine") else "Titre de séjour"
+    code = p.replace("css_", "")
+    quoi = {"relance_3m": "1re relance (3 mois avant)", "relance_1m": "2e relance (1 mois avant)",
+            "alerte_15j": "Alerte interne (15 jours avant)", "medecine_7j": "Rappel du RDV (7 jours avant)"}.get(code, code)
+    return doc, quoi
+
+
+@bp.route("/api/relances/historique")
+def historique_relances():
+    conn = auth._conn()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """SELECT r.id, r.salarie_id, r.date_validite, r.palier, r.envoye_a,
+                          to_char(r.created_at AT TIME ZONE 'Europe/Paris', 'YYYY-MM-DD HH24:MI') AS le,
+                          COALESCE(s.nom, '(salarié supprimé)') AS nom
+                   FROM dossiers_relances r LEFT JOIN dossiers_salaries s ON s.id = r.salarie_id
+                   WHERE r.envoye_a IS NOT NULL
+                   ORDER BY r.created_at DESC, r.id DESC LIMIT 2000"""
+            )
+            lignes = []
+            for r in cur.fetchall():
+                doc, quoi = _libelle_palier(r["palier"])
+                lignes.append({"id": r["id"], "sid": r["salarie_id"], "nom": r["nom"], "le": r["le"],
+                               "doc": doc, "quoi": quoi, "a": r["envoye_a"],
+                               "echeance": r["date_validite"].isoformat() if r["date_validite"] else ""})
+    finally:
+        conn.close()
+    return jsonify({"ok": True, "lignes": lignes})
+
+
 @bp.route("/api/cron/relances")
 def cron_relances():
     # Vercel envoie automatiquement « Authorization: Bearer <CRON_SECRET> »
