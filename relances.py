@@ -79,6 +79,13 @@ def _noter_relance(cur, salarie_id, jour, commentaire):
     )
 
 
+def _attestation_perimable(docs):
+    """Adhésion à la mutuelle : attestation demandée une seule fois, sans date de validité (pas de relance).
+    Dispense (CSS, mutuelle perso, autre) ou choix pas encore fait : elle expire et doit être redemandée."""
+    mut = ((docs or {}).get("mutuelle") or {}).get("mut")
+    return mut != "adhesion"
+
+
 def _a_un_titre_de_sejour(docs):
     piece = (docs or {}).get("piece") or {}
     types = piece.get("types")
@@ -98,7 +105,7 @@ DOCUMENTS = [
      "point": "récépissé de demande, nouveau titre"},
     {"ech": "cpam", "prefixe": "css_", "nom": "attestation CSS", "votre": "votre attestation CSS (complémentaire santé solidaire)",
      "le": "l'attestation CSS", "nouveau": "votre nouvelle attestation CSS",
-     "Alerte": "Alerte attestation CSS", "suivi": lambda docs: True,
+     "Alerte": "Alerte attestation CSS", "suivi": lambda docs: _attestation_perimable(docs),
      "faire": "demander son renouvellement auprès de votre CPAM (ameli.fr)",
      "fin": "",
      "point": "demande de renouvellement, nouvelle attestation"},
