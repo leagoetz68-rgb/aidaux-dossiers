@@ -616,7 +616,9 @@ function mutStatut(d){if(!d.mut)return;d.s=d.mut==="adhesion"||(d.mut==="dispens
 const mutAdhesion=p=>((p.docs||{}).mutuelle||{}).mut==="adhesion";
 const echListe=p=>ECH.filter(([k])=>(k!=="permis"||permisMode(p)!=="nc")&&(k!=="mutperso"||mutPerso(p))&&(k!=="cpam"||!mutAdhesion(p)));
 const echSt=(p,k,th)=>k==="permis"&&permisMode(p)==="ancien"?{k:"ok",t:"Ancien permis",s:"sans date de validité"}:echStatus(p.ech[k],th);
-const todo=p=>(!progress(p).done&&!verifie(p))||echListe(p).some(([k,,th])=>["vide","bad","warn"].includes(echSt(p,k,th).k));
+// Avenant pas encore signé : le dossier n'est pas complet
+const avARegler=p=>((p.vie||{}).avenants||[]).some(x=>!x.signe&&(x.date||String(x.c||"").trim()));
+const todo=p=>avARegler(p)||(!progress(p).done&&!verifie(p))||echListe(p).some(([k,,th])=>["vide","bad","warn"].includes(echSt(p,k,th).k));
 function progress(a){
   let v=0,r=0,t=0;
   [...DOCS_OBL,...DOCS_SIGN].forEach(([k])=>{t++;const s=a.docs[k].s;if(s==="verifie"||s==="nc")v++;else if(s==="recu")r++});
@@ -632,7 +634,7 @@ const ETATS=[["traiter","À traiter"],["cours","En cours"],["complet","Complet"]
 function etatDossier(p){const pr=progress(p);
   // Complet = dossier 22/22 ET toutes les échéances à jour (aucune pastille rouge ou orange)
   const echOk=echListe(p).every(([k,,th])=>!["vide","bad","warn"].includes(echSt(p,k,th).k));
-  if(pr.done&&echOk)return"complet";
+  if(pr.done&&echOk&&!avARegler(p))return"complet";
   if(pr.done)return"cours";
   const rien=[...DOCS_OBL,...DOCS_SIGN].every(([k])=>p.docs[k].s==="manquant"&&!String(p.docs[k].c||"").trim())
     &&CLASSEUR.every(([k])=>!p.classeur[k])&&DATES.every(([k])=>!p.dates[k]);
@@ -668,12 +670,13 @@ function listeTodo(){const l=[];
   S.poste.forEach(p=>{
     echListe(p).forEach(([k,lab,th])=>{const st=echSt(p,k,th);if(!["vide","bad","warn"].includes(st.k))return;
       l.push({p,f:k,t:lab,st:st.k,txt:st.t+(st.s?", "+st.s:""),d:(p.ech[k]||{}).date||""})});
+    ((p.vie||{}).avenants||[]).forEach(x=>{if(!x.signe&&(x.date||String(x.c||"").trim()))l.push({p,f:"avenant",t:"Avenant à faire signer",st:"warn",txt:(x.date?"du "+fmt(x.date):"")+(String(x.c||"").trim()?(x.date?" · ":"")+String(x.c).trim():""),d:""})});
     const pr=progress(p);if(!pr.done&&!verifie(p))l.push({p,f:"dossier",t:"Dossier incomplet",st:"doss",txt:pr.v+" / "+pr.t+" éléments validés",d:""})});
   return l.sort((a,b)=>TODO_GRAV[a.st]-TODO_GRAV[b.st]||String(a.d||"9").localeCompare(String(b.d||"9"))||a.p.nom.localeCompare(b.p.nom,"fr"))}
 let TODO_F="tous";
 function ouvrirTodo(){
   const tout=listeTodo(),l=TODO_F==="tous"?tout:tout.filter(x=>x.f===TODO_F);
-  const types=[["tous","Tout"],...ECH.map(([k,lab])=>[k,lab]),["dossier","Dossier incomplet"]].filter(([k])=>k==="tous"||tout.some(x=>x.f===k));
+  const types=[["tous","Tout"],...ECH.map(([k,lab])=>[k,lab]),["avenant","Avenant à signer"],["dossier","Dossier incomplet"]].filter(([k])=>k==="tous"||tout.some(x=>x.f===k));
   let el=document.getElementById("rdvPanel");
   if(!el){el=document.createElement("div");el.id="rdvPanel";el.className="rdv-ov";document.body.appendChild(el)}
   el.innerHTML=`<div class="rdv-box" role="dialog" aria-modal="true" aria-label="À traiter">
@@ -766,7 +769,7 @@ function itemListe(p){
   const pr=progress(p),act=UI.open===p.id;
   // 1re pastille = dossier administratif (rouge tant qu'il n'est pas complet ; la CMU ne compte pas)
   const dots=`<i class="dot st-${pr.done?"ok":verifie(p)?"warn":"bad"}" title="Dossier : ${pr.done?"complet":(verifie(p)?"incomplet mais vérifié le "+fmt(p.dates.verif):"incomplet")+" ("+pr.v+"/"+pr.t+")"}"></i>`+
-    echListe(p).map(([k,l,th])=>{const s=echSt(p,k,th);return `<i class="dot st-${s.k}" title="${l} : ${s.t}"></i>`}).join("");
+    echListe(p).map(([k,l,th])=>{const s=echSt(p,k,th);return `<i class="dot st-${s.k}" title="${l} : ${s.t}"></i>`}).join("")+(avARegler(p)?`<i class="dot st-warn" title="Avenant à faire signer"></i>`:"");
   return `<div class="li-row"><button class="li ${act?"active":""}" data-open="${p.id}" aria-current="${act}">
     <div class="av">${initials(p.nom)}</div>
     <div class="li-t"><b>${esc(p.nom)}${catDe(p)==="administratif"?" "+badgeCat(p):""}</b><span>${p.embauche?"Embauché(e) le "+fmt(p.embauche):"&nbsp;"}${(()=>{const r=!pr.done&&derniereRel(p);return r?" · relancé(e) le "+fmt(r.d)+" ("+(REL_T[r.t]||REL_T.mail)[1].toLowerCase()+")":""})()}</span>
@@ -1218,6 +1221,7 @@ function manquants(a){const l=[];
     if(k==="mutuelle"&&d.mut==="dispense"){l.push(d.just?"Justificatif de dispense de mutuelle ("+({css:"attestation CSS",perso:"mutuelle perso",autre:"autre"}[d.just]||d.just)+")":"Justificatif de dispense de mutuelle");return}
     l.push(lab)});
   CLASSEUR.forEach(([k,lab])=>{if(!a.classeur[k])l.push(lab)});
+  ((a.vie||{}).avenants||[]).forEach(x=>{if(!x.signe&&(x.date||String(x.c||"").trim()))l.push("Avenant à faire signer"+(x.date?" (du "+fmt(x.date)+")":"")+(String(x.c||"").trim()?" : "+String(x.c).trim():""))});
   echListe(a).forEach(([k,lab,th])=>{const st=echSt(a,k,th);if(st.k==="vide")l.push(lab+" : date de validité à renseigner");else if(st.k==="bad")l.push(lab+" : "+st.t.toLowerCase()+(st.s?" ("+st.s+")":""))});
   return l}
 function editor(p,k){
