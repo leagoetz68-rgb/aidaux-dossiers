@@ -376,5 +376,11 @@ def cron_relances():
         emails = ximi_emails.remplir_emails_vides()
     except Exception as e:
         emails = f"erreur Ximi : {e}"
+    traites = lancer_relances()
+    try:  # puis note dans le Journal Ximi ce qui manque encore (seulement si la liste a changé)
+        import ximi_emails
+        journal = ximi_emails.synchro_manquants()
+    except Exception as e:
+        journal = f"erreur Ximi : {e}"
     return jsonify({"ok": True, "envoi": "outlook" if _outlook_actif() else "brevo",
-                    "emails_ximi": emails, "traites": lancer_relances()})
+                    "emails_ximi": emails, "traites": traites, "journal_ximi": journal})
