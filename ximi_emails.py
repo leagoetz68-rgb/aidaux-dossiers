@@ -101,9 +101,24 @@ def _agents():
     return _agents_cache["liste"]
 
 
-def corps_note(texte):
-    """Corps envoyé à PUT api/agents/{id}/notes (format de la doc Ximi « Ajouter une Note dans le Journal »)."""
-    return {"Content": texte}
+# Nom du champ texte de la note : on essaie les noms courants, et on retient celui que Ximi accepte.
+CHAMPS_NOTE = ["Content", "Text", "Note", "Comment", "Description", "Body"]
+_champ_ok = {"nom": None}
+
+
+def _envoyer_note(agent_id, texte):
+    essais = [_champ_ok["nom"]] if _champ_ok["nom"] else CHAMPS_NOTE
+    derniere = None
+    for champ in essais:
+        try:
+            ximi.put(f"api/agents/{agent_id}/notes", {champ: texte})
+            _champ_ok["nom"] = champ
+            return
+        except Exception as e:  # 400 = champ refusé : on essaie le suivant ; autre erreur : on arrête
+            derniere = e
+            if not str(e).startswith("400"):
+                break
+    raise derniere
 
 
 def noter_dans_ximi(nom_salarie, texte):
@@ -112,10 +127,60 @@ def noter_dans_ximi(nom_salarie, texte):
         a = _correspond(nom_salarie, _agents())
         if not a or a.get("Id") is None:
             return False, "salarié introuvable dans Ximi"
-        ximi.put(f"api/agents/{a['Id']}/notes", corps_note(texte[:2000]))
+        _envoyer_note(a["Id"], texte[:2000])
         return True, "noté dans Ximi"
     except Exception as e:
         return False, str(e)[:300]
+
+
+def synchro_manquants():
+    """Note dans le Journal Ximi la liste des éléments manquants des salariés dont la liste a changé
+    depuis la dernière note (une seule note par salarié et par changement)."""
+    import datetime
+    from psycopg2.extras import Json
+    jour = datetime.date.today().strftime("%d/%m/%Y")
+    res = {"notes": 0, "introuvables": [], "erreurs": []}
+    conn = auth._conn()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""SELECT id, nom, manquants, manquants_ximi FROM dossiers_salaries
+                           WHERE actif AND manquants IS NOT NULL
+                             AND manquants IS DISTINCT FROM manquants_ximi""")
+            for s in cur.fetchall():
+                liste, avant = s["manquants"] or [], s["manquants_ximi"]
+                if not liste and not avant:  # complet et jamais signalé : rien à dire
+                    cur.execute("UPDATE dossiers_salaries SET manquants_ximi = %s WHERE id = %s", (Json(liste), s["id"]))
+                    continue
+                if liste:
+                    texte = f"Suivi du dossier salarié – Aid'Aux Dossiers ({jour})\nÉléments manquants :\n" + "\n".join(f"- {x}" for x in liste)
+                    recus = [x for x in (avant or []) if x not in liste]
+                    if recus:
+                        texte += "\n\nReçu / réglé depuis la dernière note :\n" + "\n".join(f"- {x}" for x in recus)
+                else:
+                    texte = f"Suivi du dossier salarié – Aid'Aux Dossiers ({jour})\nDossier complet : tous les éléments ont été reçus."
+                ok, msg = noter_dans_ximi(s["nom"], texte)
+                if ok:
+                    res["notes"] += 1
+                    cur.execute("UPDATE dossiers_salaries SET manquants_ximi = %s WHERE id = %s", (Json(liste), s["id"]))
+                elif "introuvable" in msg:
+                    res["introuvables"].append(s["nom"])
+                else:
+                    res["erreurs"].append(f"{s['nom']} : {msg}")
+                    if len(res["erreurs"]) >= 3:  # Ximi en panne : on réessaiera demain
+                        break
+                conn.commit()
+        conn.commit()
+    finally:
+        conn.close()
+    return res
+
+
+@bp.route("/api/ximi/synchro", methods=["POST"])
+def api_synchro():
+    try:
+        return jsonify({"ok": True, **synchro_manquants()})
+    except Exception as e:
+        return jsonify({"ok": False, "erreur": f"Ximi : {e}"}), 502
 
 
 @bp.route("/api/salaries/<int:sid>/ximi-note", methods=["POST"])
