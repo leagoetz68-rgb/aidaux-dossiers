@@ -170,6 +170,8 @@ a.btn{text-decoration:none;display:inline-block}
 .li-search input{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font:inherit;background:var(--card);color:var(--ink)}
 .cat-badge{display:inline-block;vertical-align:middle;font-family:inherit;font-size:10.5px;font-weight:700;letter-spacing:.02em;padding:1px 7px;border-radius:999px;margin-left:4px}
 .cat-badge.administratif{background:#EDE7FF;color:#5B3FB8}
+.mx-lab{font-size:12.5px;color:var(--ink2);margin:10px 0 2px}
+.cat-badge.mixte{background:linear-gradient(90deg,var(--teal-soft),#EDE7FF);color:#3B3F8F}
 .cat-badge.terrain{background:var(--teal-soft);color:var(--teal-ink)}
 .cat-switch{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .cat-switch .chip{padding:4px 10px;font-size:12.5px}
@@ -631,8 +633,11 @@ function progress(a){
   return{v,r,t,done:v===t};
 }
 // Catégorie : intervenants terrain / personnel administratif
-const CATS={terrain:"Intervenant terrain",administratif:"Administratif"};
-const catDe=p=>p.categorie==="administratif"?"administratif":"terrain";
+const CATS={terrain:"Intervenant terrain",administratif:"Administratif",mixte:"Terrain + Administratif"};
+const catDe=p=>p.categorie==="administratif"?"administratif":p.categorie==="mixte"?"mixte":"terrain";
+// « mixte » (terrain + administratif) compte dans les deux catégories
+const estCat=(p,c)=>c==="tous"||catDe(p)===c||catDe(p)==="mixte";
+const estAdmin=p=>catDe(p)!=="terrain";
 // État du dossier : à traiter (rien de rempli), en cours (commencé ou échéance à régler), complet
 const ETATS=[["traiter","À traiter"],["cours","En cours"],["complet","Complet"]];
 function etatDossier(p){const pr=progress(p);
@@ -644,8 +649,8 @@ function etatDossier(p){const pr=progress(p);
   const rien=[...DOCS_OBL,...DOCS_SIGN].every(([k])=>p.docs[k].s==="manquant"&&!String(p.docs[k].c||"").trim())
     &&CLASSEUR.every(([k])=>!p.classeur[k])&&DATES.every(([k])=>!p.dates[k]);
   return rien?"traiter":"cours";}
-const byAg=l=>(UI.agence==="Toutes"?l:l.filter(p=>p.agence===UI.agence)).filter(p=>UI.cat==="tous"||catDe(p)===UI.cat);
-const badgeCat=p=>`<span class="cat-badge ${catDe(p)}">${catDe(p)==="administratif"?"Administratif":"Terrain"}</span>`;
+const byAg=l=>(UI.agence==="Toutes"?l:l.filter(p=>p.agence===UI.agence)).filter(p=>estCat(p,UI.cat));
+const badgeCat=p=>`<span class="cat-badge ${catDe(p)}">${{administratif:"Administratif",mixte:"Terrain + Admin"}[catDe(p)]||"Terrain"}</span>`;
 
 function ring(pct,col,light){
   const r=28,c=2*Math.PI*r,off=c*(1-pct/100);
@@ -739,6 +744,7 @@ function renderAdd(){
    <div class="sub" role="radiogroup" aria-label="Catégorie">
     <button class="tick" data-fcat="terrain" aria-pressed="true">Intervenant terrain</button>
     <button class="tick" data-fcat="administratif" aria-pressed="false">Personnel administratif</button>
+    <button class="tick" data-fcat="mixte" aria-pressed="false">Terrain + administratif</button>
    </div>
    <div class="sub" role="radiogroup" aria-label="Où le placer">
     <button class="tick" data-ph="arrivee" aria-pressed="true">Nouvelle arrivée : dossier d’embauche à compléter</button>
@@ -767,7 +773,7 @@ function itemArchive(p){
   const act=UI.open===p.id;
   return `<div class="li-row"><button class="li ${act?"active":""}" data-open="${p.id}" aria-current="${act}">
     <div class="av" style="opacity:.6">${initials(p.nom)}</div>
-    <div class="li-t"><b>${esc(p.nom)}${catDe(p)==="administratif"?" "+badgeCat(p):""}</b><span>${p.archive_le?"Archivé(e) le "+fmt(p.archive_le):"Archivé(e)"}</span></div></button></div>`;
+    <div class="li-t"><b>${esc(p.nom)}${estAdmin(p)?" "+badgeCat(p):""}</b><span>${p.archive_le?"Archivé(e) le "+fmt(p.archive_le):"Archivé(e)"}</span></div></button></div>`;
 }
 function itemListe(p){
   if(UI.tab==="archives")return itemArchive(p);
@@ -777,7 +783,7 @@ function itemListe(p){
     echListe(p).map(([k,l,th])=>{const s=echSt(p,k,th);return `<i class="dot st-${s.k}" title="${l} : ${s.t}"></i>`}).join("")+(avARegler(p)?`<i class="dot st-warn" title="Avenant à faire signer"></i>`:"");
   return `<div class="li-row"><button class="li ${act?"active":""}" data-open="${p.id}" aria-current="${act}">
     <div class="av">${initials(p.nom)}</div>
-    <div class="li-t"><b>${esc(p.nom)}${catDe(p)==="administratif"?" "+badgeCat(p):""}</b><span>${p.embauche?"Embauché(e) le "+fmt(p.embauche):"&nbsp;"}${(()=>{const r=!pr.done&&derniereRel(p);return r?" · relancé(e) le "+fmt(r.d)+" ("+(REL_T[r.t]||REL_T.mail)[1].toLowerCase()+")":""})()}</span>
+    <div class="li-t"><b>${esc(p.nom)}${estAdmin(p)?" "+badgeCat(p):""}</b><span>${p.embauche?"Embauché(e) le "+fmt(p.embauche):"&nbsp;"}${(()=>{const r=!pr.done&&derniereRel(p);return r?" · relancé(e) le "+fmt(r.d)+" ("+(REL_T[r.t]||REL_T.mail)[1].toLowerCase()+")":""})()}</span>
       <div class="li-m"><span class="dots">${dots}</span><span class="mini"><i style="width:${pr.v/pr.t*100}%"></i></span><small>${pr.v}/${pr.t}</small></div></div></button><button class="li-x li-arch" data-archiver="${p.id}" title="Archiver ${esc(p.nom)} (a quitté AID’Aux)" aria-label="Archiver ${esc(p.nom)}">🗄</button><button class="li-x" data-retirer="${p.id}" title="Supprimer ${esc(p.nom)}" aria-label="Supprimer ${esc(p.nom)}">×</button></div>`;
 }
 function listeHTML(l,vide){
@@ -794,7 +800,7 @@ document.addEventListener("input",ev=>{
 function viewSplit(){
   const l=listeOnglet();
   const base=UI.tab==="archives"?(S.archives||[]):UI.tab==="arrivees"?S.arrivees:S.poste;
-  const nCat=c=>(UI.agence==="Toutes"?base:base.filter(p=>p.agence===UI.agence)).filter(p=>c==="tous"||catDe(p)===c).length;
+  const nCat=c=>(UI.agence==="Toutes"?base:base.filter(p=>p.agence===UI.agence)).filter(p=>estCat(p,c)).length;
   let head=`<div class="li-head li-cat" role="group" aria-label="Catégorie de salariés">${[["tous","Tous"],["terrain","Terrain"],["administratif","Administratifs"]].map(([c,l])=>`<button class="chip" data-cat="${c}" aria-pressed="${UI.cat===c}">${l} (${nCat(c)})</button>`).join("")}</div>`;
   head+=`<div class="li-search"><input type="search" id="recherche" value="${esc(UI.q||"")}" placeholder="🔍 Rechercher un salarié…" aria-label="Rechercher un salarié" autocomplete="off"></div>`;
   if(UI.tab==="poste"){
@@ -964,6 +970,7 @@ function carteEnt(a,d){
       </div>
     </div>
     ${note}
+    ${catDe(a)==="mixte"&&PDF_TYPE[d.k]?`<div class="mx-lab">🏢 Entretien <b>bureau</b> (administratif)</div>${cartePdf(a,d)}<div class="mx-lab">🚗 Entretien <b>terrain</b> (intervenante)</div>`:""}
     ${catDe(a)==="administratif"&&PDF_TYPE[d.k]?cartePdf(a,d)+`<div class="v-row"><button class="nc" data-entnc="${d.k}" aria-pressed="${!!e.nc}">N/C</button></div>`:`<div class="v-row"><button class="btn" data-fmopen="${d.k}">✍️ ${pg.n?"Reprendre":"Remplir"} le compte rendu</button>${pg.n?`<small class="fm-prog">${pg.n}/${pg.t} réponses</small>`:""}
       <button class="nc" data-entnc="${d.k}" aria-pressed="${!!e.nc}">N/C</button></div>`}
     <textarea class="v-com" data-entc="${d.k}" rows="2" placeholder="Commentaire…" aria-label="Commentaire ${d.t}">${esc(e.c)}</textarea>
@@ -1362,7 +1369,7 @@ document.addEventListener("click",async ev=>{
   if(t.dataset.cat){UI.cat=t.dataset.cat;return render()}
   if(t.dataset.fcat){document.querySelectorAll("[data-fcat]").forEach(b=>b.setAttribute("aria-pressed",b===t));return}
   if(t.dataset.setcat&&a){if(catDe(a)===t.dataset.setcat)return;a.categorie=t.dataset.setcat;
-    push(a,{txt:a.nom+" : "+(a.categorie==="administratif"?"personnel administratif":"intervenant terrain")});render();toast(first(a.nom)+" → "+CATS[a.categorie]);return}
+    push(a,{txt:a.nom+" : "+CATS[a.categorie].toLowerCase()});render();toast(first(a.nom)+" → "+CATS[a.categorie]);return}
   if(t.dataset.ph){document.querySelectorAll("[data-ph]").forEach(b=>b.setAttribute("aria-pressed",b===t));return}
   if(t.id==="fCancel"){UI.adding=false;return render()}
   if(t.id==="fOk"){
