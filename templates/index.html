@@ -617,7 +617,7 @@ const mutAdhesion=p=>((p.docs||{}).mutuelle||{}).mut==="adhesion";
 const echListe=p=>ECH.filter(([k])=>(k!=="permis"||permisMode(p)!=="nc")&&(k!=="mutperso"||mutPerso(p))&&(k!=="cpam"||!mutAdhesion(p)));
 const echSt=(p,k,th)=>k==="permis"&&permisMode(p)==="ancien"?{k:"ok",t:"Ancien permis",s:"sans date de validité"}:echStatus(p.ech[k],th);
 // Avenant pas encore signé : le dossier n'est pas complet
-const avARegler=p=>((p.vie||{}).avenants||[]).some(x=>!x.signe&&(x.date||String(x.c||"").trim()));
+const avARegler=p=>((p.vie||{}).avenants||[]).some(x=>!x.signe);
 const todo=p=>avARegler(p)||(!progress(p).done&&!verifie(p))||echListe(p).some(([k,,th])=>["vide","bad","warn"].includes(echSt(p,k,th).k));
 function progress(a){
   let v=0,r=0,t=0;
@@ -670,7 +670,7 @@ function listeTodo(){const l=[];
   S.poste.forEach(p=>{
     echListe(p).forEach(([k,lab,th])=>{const st=echSt(p,k,th);if(!["vide","bad","warn"].includes(st.k))return;
       l.push({p,f:k,t:lab,st:st.k,txt:st.t+(st.s?", "+st.s:""),d:(p.ech[k]||{}).date||""})});
-    ((p.vie||{}).avenants||[]).forEach(x=>{if(!x.signe&&(x.date||String(x.c||"").trim()))l.push({p,f:"avenant",t:"Avenant à faire signer",st:"warn",txt:(x.date?"du "+fmt(x.date):"")+(String(x.c||"").trim()?(x.date?" · ":"")+String(x.c).trim():""),d:""})});
+    ((p.vie||{}).avenants||[]).forEach(x=>{if(!x.signe)l.push({p,f:"avenant",t:"Avenant à faire signer",st:"warn",txt:(x.date?"du "+fmt(x.date):"")+(String(x.c||"").trim()?(x.date?" · ":"")+String(x.c).trim():""),d:""})});
     const pr=progress(p);if(!pr.done&&!verifie(p))l.push({p,f:"dossier",t:"Dossier incomplet",st:"doss",txt:pr.v+" / "+pr.t+" éléments validés",d:""})});
   return l.sort((a,b)=>TODO_GRAV[a.st]-TODO_GRAV[b.st]||String(a.d||"9").localeCompare(String(b.d||"9"))||a.p.nom.localeCompare(b.p.nom,"fr"))}
 let TODO_F="tous";
@@ -883,7 +883,7 @@ function carteEch(a,k,ico,titre,ek){
 }
 // Un avenant vide (ni date ni objet) ne compte pas comme « à faire signer »
 const avVide=x=>!x.signe&&!x.date&&!String(x.c||"").trim();
-const avNonSigne=x=>!x.signe&&!avVide(x);
+const avNonSigne=x=>!x.signe; // toute ligne non signée est à faire signer, même sans date
 function carteAvenants(a){
   // ordre chronologique (plus ancien en haut) ; un avenant sans date
   // (en cours de saisie) reste en haut pour être rempli
@@ -897,7 +897,7 @@ function carteAvenants(a){
       <button class="x" data-avdel="${i}" title="Supprimer" aria-label="Supprimer cet avenant">×</button></div>`).join("")
     :`<p class="v-empty">Aucun avenant pour l’instant.</p>`;
   return `<article class="vcard vc-av st-${st} wide" id="vie-avenants">
-    <header><span class="v-ico" aria-hidden="true">✍️</span><h4>Avenants</h4><span class="v-st">${L.some(x=>!avVide(x))?(ns?ns+" à faire signer":"Tous signés"):"Aucun"}</span></header>
+    <header><span class="v-ico" aria-hidden="true">✍️</span><h4>Avenants</h4><span class="v-st">${L.length?(ns?ns+" à faire signer":"Tous signés"):"Aucun"}</span></header>
     <div class="av-list">${lignes}</div>
     <button class="btn light av-add" data-avadd>+ Ajouter un avenant</button>
   </article>`;
@@ -1221,7 +1221,7 @@ function manquants(a){const l=[];
     if(k==="mutuelle"&&d.mut==="dispense"){l.push(d.just?"Justificatif de dispense de mutuelle ("+({css:"attestation CSS",perso:"mutuelle perso",autre:"autre"}[d.just]||d.just)+")":"Justificatif de dispense de mutuelle");return}
     l.push(lab)});
   CLASSEUR.forEach(([k,lab])=>{if(!a.classeur[k])l.push(lab)});
-  ((a.vie||{}).avenants||[]).forEach(x=>{if(!x.signe&&(x.date||String(x.c||"").trim()))l.push("Avenant à faire signer"+(x.date?" (du "+fmt(x.date)+")":"")+(String(x.c||"").trim()?" : "+String(x.c).trim():""))});
+  ((a.vie||{}).avenants||[]).forEach(x=>{if(!x.signe)l.push("Avenant à faire signer"+(x.date?" (du "+fmt(x.date)+")":"")+(String(x.c||"").trim()?" : "+String(x.c).trim():""))});
   echListe(a).forEach(([k,lab,th])=>{const st=echSt(a,k,th);if(st.k==="vide")l.push(lab+" : date de validité à renseigner");else if(st.k==="bad")l.push(lab+" : "+st.t.toLowerCase()+(st.s?" ("+st.s+")":""))});
   return l}
 function editor(p,k){
