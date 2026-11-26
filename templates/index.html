@@ -481,7 +481,7 @@ textarea.fm-in{resize:vertical;min-height:48px;overflow:hidden;display:block}
       <p id="today"></p>
     </div>
     <span class="who-me">{{ user_email }}</span>
-    <button class="btn light" id="impBtn" title="Récupérer les emails des salariés depuis Ximi">📥 Emails Ximi</button><input type="file" id="impFile" accept=".xlsx,.xls,.csv" hidden>
+    <button class="btn light" id="impBtn" title="Récupérer les emails des salariés depuis Ximi">📥 Emails Ximi</button><button class="btn light" id="xjBtn" title="Noter maintenant dans le Journal Ximi ce qui manque (sinon c’est fait automatiquement chaque matin)">🔄 Journal Ximi</button><input type="file" id="impFile" accept=".xlsx,.xls,.csv" hidden>
     <button class="btn teal" id="addBtn">+ Ajouter un salarié</button>
     <a class="ghost" href="/logout">Se déconnecter</a>
   </div>
@@ -576,7 +576,8 @@ async function load(){
 }
 let chain=Promise.resolve();
 function push(p,news){
-  const body={docs:p.docs,classeur:p.classeur,dates:p.dates,ech:p.ech,vie:p.vie,phase:p.phase,categorie:catDe(p),email:p.email||"",embauche:p.embauche||""};
+  p.manquants=manquants(p);
+  const body={manquants:p.manquants,docs:p.docs,classeur:p.classeur,dates:p.dates,ech:p.ech,vie:p.vie,phase:p.phase,categorie:catDe(p),email:p.email||"",embauche:p.embauche||""};
   if(news)body.news=news;
   chain=chain.then(()=>api("/api/salaries/"+p.id,{method:"PUT",body:JSON.stringify(body)}))
     .then(j=>{if(j&&j.feed){S.feed=j.feed;renderFeed()}})
@@ -1877,6 +1878,20 @@ async function peTelecharger(){
   }catch(e){toast("Téléchargement impossible : "+e.message)}
 }
 
+// ---- Journal Ximi automatique : l'appli tient à jour la liste des éléments manquants de chaque salarié ----
+let MQ_FAIT=false;
+function synchroManquants(){if(MQ_FAIT||!S.poste.length)return;MQ_FAIT=true;
+  const lignes={};S.poste.forEach(p=>{const m=manquants(p);if(JSON.stringify(m)!==JSON.stringify(p.manquants||null)){lignes[p.id]=m;p.manquants=m}});
+  if(Object.keys(lignes).length)api("/api/manquants",{method:"POST",body:JSON.stringify({lignes})}).catch(()=>{})}
+setInterval(synchroManquants,1500);
+document.addEventListener("click",async ev=>{const b=ev.target.closest&&ev.target.closest("#xjBtn");if(!b)return;
+  if(!confirm("Noter maintenant dans le Journal Ximi les éléments manquants des salariés dont le dossier a changé ?\n\n(Sinon c’est fait automatiquement chaque matin.)"))return;
+  b.disabled=true;const lib=b.textContent;b.textContent="⏳ Ximi…";
+  try{MQ_FAIT=false;synchroManquants();await new Promise(r=>setTimeout(r,800));
+    const j=await api("/api/ximi/synchro",{method:"POST"});
+    toast(j.notes+" note(s) ajoutée(s) dans Ximi"+(j.introuvables.length?" · introuvables dans Ximi : "+j.introuvables.slice(0,5).join(", ")+(j.introuvables.length>5?"…":""):"")+(j.erreurs.length?" · erreur : "+j.erreurs[0]:""))}
+  catch(e){if(e.message!=="login")toast("Ximi : "+e.message)}
+  finally{b.disabled=false;b.textContent=lib}});
 render();load();
 </script>
 {% endraw %}
