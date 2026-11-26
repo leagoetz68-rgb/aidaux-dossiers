@@ -60,6 +60,16 @@ def _noter_relance(cur, salarie_id, jour, commentaire):
     """Ajoute une relance automatique (mail) à l'historique « Suivi des relances »
     de la fiche du salarié (champ vie.relances), sans toucher au reste de « vie »."""
     entree = Json({"d": jour.isoformat(), "t": "mail", "c": commentaire[:200], "auto": True})
+    # Copie dans le Journal de l'intervenant sur Ximi (sans bloquer la relance si Ximi ne répond pas)
+    try:
+        import ximi_emails
+        cur.execute("SELECT nom FROM dossiers_salaries WHERE id = %s", (salarie_id,))
+        row = cur.fetchone()
+        nom = row[0] if row and not isinstance(row, dict) else (row or {}).get("nom")
+        if nom:
+            ximi_emails.noter_dans_ximi(nom, f"Relance automatique (mail) du {jour.strftime('%d/%m/%Y')} - Aid'Aux Dossiers : {commentaire}")
+    except Exception:
+        pass
     cur.execute(
         """UPDATE dossiers_salaries
            SET vie = jsonb_set(COALESCE(vie, '{}'::jsonb), '{relances}',
