@@ -390,6 +390,7 @@ a.btn{text-decoration:none;display:inline-block}
 .sig-tools{display:flex;gap:6px;padding:6px;border-top:1px dashed var(--line)}
 .sig-in{flex:1;min-width:0;border:1px solid var(--line);border-radius:8px;padding:5px 8px;font:inherit;font-size:13px;background:var(--bg);color:var(--ink)}
 @media print{.sig-tools,.sig-ph{display:none!important}.sig{border:1px solid #999}}
+.rel-aide{margin:6px 0 0;font-size:12.5px;color:var(--ink2)}
 .ed-cta{display:flex;justify-content:center;margin:-6px 0 14px}
 .ed-pen{background:none;border:none;cursor:pointer;font-size:14px;margin-left:8px;opacity:.45;vertical-align:middle}
 .ed-pen:hover{opacity:1}
@@ -1186,7 +1187,7 @@ function fiche(a){
      ${relancesHTML(a)}
      <div class="verif-box ${verifie(a)?"on":""}">${cb('data-verif',verifie(a),"<b>Dossier vérifié</b> <small>même s’il est incomplet</small>")}
        <span class="verif-info">${verifie(a)?"Vérifié le "+fmt(a.dates.verif)+(a.dates.verif_par?" par "+esc(a.dates.verif_par):""):"À cocher quand le dossier a été contrôlé, même s’il manque des pièces."}</span></div>
-     <p class="note">Les cases sont enregistrées dès qu’on les coche. « Vérifié » coche aussi « Présent ».</p>
+     <p class="note">Les cases sont enregistrées dès qu’on les coche.</p>
    </div></div>
    ${vieSection(a)}
    
@@ -1203,9 +1204,19 @@ function relancesHTML(a){
    <div class="rel-list">${lignes}</div>
    <div class="rel-add"><label>Date<input type="date" min="2000-01-01" max="2040-12-31" id="relDate" value="${iso(new Date())}"></label>
      <label>Type<select id="relType">${Object.entries(REL_T).map(([k,t])=>`<option value="${k}">${t[0]} ${t[1]}</option>`).join("")}</select></label>
-     <label class="rel-grow">Commentaire <small>(facultatif)</small><input id="relCom" placeholder="Ex. : manque RIB et carte vitale" autocomplete="off"></label>
-     <button class="btn teal" data-reladd>Noter la relance</button></div>`;
+     <label class="rel-grow">Commentaire <small>(facultatif, pour vous)</small><input id="relCom" placeholder="Ex. : manque RIB et carte vitale" autocomplete="off"></label>
+     <button class="btn teal" data-reladd>Noter la relance</button></div>
+     ${(()=>{const m=manquants(a);return m.length?`<p class="note rel-aide">📋 <b>Ajouté automatiquement à la note Ximi</b> : il manque ${m.length} élément${m.length>1?"s":""} — ${esc(m.join(", "))}.</p>`:`<p class="note rel-aide">✅ Rien ne manque dans le dossier.</p>`})()}
+     <p class="note rel-aide">ℹ️ « Noter la relance » <b>n’envoie rien au salarié</b> : c’est un mémo d’une relance que vous avez faite vous-même (mail, appel, RDV). Il est enregistré ici et dans le Journal du salarié sur Ximi.</p>`;
 }
+// Ce qui manque encore dans le dossier (documents non cochés, classeur, échéances à régler)
+function manquants(a){const l=[];
+  [...DOCS_OBL,...DOCS_SIGN].forEach(([k,lab])=>{const d=a.docs[k];if(!d||d.s==="verifie"||d.s==="nc")return;
+    if(k==="mutuelle"&&d.mut==="dispense"){l.push(d.just?"Justificatif de dispense de mutuelle ("+({css:"attestation CSS",perso:"mutuelle perso",autre:"autre"}[d.just]||d.just)+")":"Justificatif de dispense de mutuelle");return}
+    l.push(lab)});
+  CLASSEUR.forEach(([k,lab])=>{if(!a.classeur[k])l.push(lab)});
+  echListe(a).forEach(([k,lab,th])=>{const st=echSt(a,k,th);if(st.k==="vide")l.push(lab+" : date de validité à renseigner");else if(st.k==="bad")l.push(lab+" : "+st.t.toLowerCase()+(st.s?" ("+st.s+")":""))});
+  return l}
 function editor(p,k){
   const e=p.ech[k],l=ECH.find(x=>x[0]===k)[1];
   return `<div class="editor"><b style="width:100%">${l}</b>
@@ -1381,7 +1392,7 @@ document.addEventListener("click",async ev=>{
     a.vie.relances.push({d,t:ty,c});render();
     push(a,{txt:"Relance ("+REL_T[ty][1].toLowerCase()+") pour "+a.nom+(c?" : "+c:"")});toast("Relance notée");
     // copie dans le Journal de l'intervenant sur Ximi
-    api("/api/salaries/"+a.id+"/ximi-note",{method:"POST",body:JSON.stringify({texte:"Relance ("+REL_T[ty][1].toLowerCase()+") du "+fmt(d)+" - Aid'Aux Dossiers"+(c?" : "+c:"")})})
+    api("/api/salaries/"+a.id+"/ximi-note",{method:"POST",body:JSON.stringify({texte:(()=>{const m=manquants(a);return "Relance ("+REL_T[ty][1].toLowerCase()+") du "+fmt(d)+" - Aid'Aux Dossiers"+(c?"\n"+c:"")+(m.length?"\n\nÉléments manquants :\n"+m.map(x=>"- "+x).join("\n"):"\n\nDossier complet.")})()})})
       .then(()=>toast("Relance notée (et ajoutée au journal Ximi)")).catch(e=>{if(e.message!=="login")toast("Relance notée dans l’appli, mais pas dans Ximi : "+e.message)});
     return}
   if(a&&t.dataset.reldel!==undefined){if(!confirm("Supprimer cette relance ?"))return;a.vie.relances.splice(+t.dataset.reldel,1);render();push(a);return}
