@@ -102,6 +102,9 @@ def init_db():
                 "ALTER TABLE dossiers_salaries ADD COLUMN IF NOT EXISTS archive BOOLEAN NOT NULL DEFAULT FALSE"
             )
             cur.execute("ALTER TABLE dossiers_salaries ADD COLUMN IF NOT EXISTS archive_le DATE")
+            # Éléments manquants (calculés par l'appli) et dernière liste notée dans le Journal Ximi
+            cur.execute("ALTER TABLE dossiers_salaries ADD COLUMN IF NOT EXISTS manquants JSONB")
+            cur.execute("ALTER TABLE dossiers_salaries ADD COLUMN IF NOT EXISTS manquants_ximi JSONB")
             # Catégorie : 'terrain' ou 'administratif' (NULL = pas encore classé)
             cur.execute("ALTER TABLE dossiers_salaries ADD COLUMN IF NOT EXISTS categorie TEXT")
             _classer_categories(cur)
@@ -150,7 +153,7 @@ def _salarie(row):
     d["embauche"] = d["embauche"].isoformat() if d.get("embauche") else ""
     d["archive_le"] = d["archive_le"].isoformat() if d.get("archive_le") else ""
     d["categorie"] = d.get("categorie") or "terrain"
-    for k in ("created_at", "updated_at"):
+    for k in ("created_at", "updated_at", "manquants_ximi"):
         d.pop(k, None)
     return d
 
@@ -252,6 +255,9 @@ def api_maj(sid):
     if "embauche" in body:
         champs.append("embauche = %s")
         valeurs.append(body["embauche"] or None)
+    if isinstance(body.get("manquants"), list):
+        champs.append("manquants = %s")
+        valeurs.append(Json([str(x)[:200] for x in body["manquants"][:100]]))
     if "email" in body:
         champs.append("email = %s")
         valeurs.append((body["email"] or "").strip().lower() or None)
@@ -314,6 +320,25 @@ def api_archiver(sid):
     finally:
         conn.close()
     return jsonify({"ok": True, "salarie": salarie, "feed": feed})
+
+
+# ---- Éléments manquants : mise à jour groupée (à l'ouverture de l'appli) ----
+@app.route("/api/manquants", methods=["POST"])
+def api_manquants():
+    lignes = (request.get_json(silent=True) or {}).get("lignes") or {}
+    if not isinstance(lignes, dict):
+        return jsonify({"ok": False, "erreur": "format invalide"}), 400
+    conn = auth._conn()
+    try:
+        with conn.cursor() as cur:
+            for sid, liste in list(lignes.items())[:500]:
+                if isinstance(liste, list):
+                    cur.execute("UPDATE dossiers_salaries SET manquants = %s WHERE id = %s",
+                                (Json([str(x)[:200] for x in liste[:100]]), int(sid)))
+        conn.commit()
+    finally:
+        conn.close()
+    return jsonify({"ok": True})
 
 
 # ---- Entretiens du personnel administratif (PDF) ----
