@@ -1379,7 +1379,11 @@ document.addEventListener("click",async ev=>{
     const d=document.getElementById("relDate").value;if(!d)return toast("Choisissez la date de la relance");
     const ty=document.getElementById("relType").value,c=document.getElementById("relCom").value.trim();
     a.vie.relances.push({d,t:ty,c});render();
-    push(a,{txt:"Relance ("+REL_T[ty][1].toLowerCase()+") pour "+a.nom+(c?" : "+c:"")});toast("Relance notée");return}
+    push(a,{txt:"Relance ("+REL_T[ty][1].toLowerCase()+") pour "+a.nom+(c?" : "+c:"")});toast("Relance notée");
+    // copie dans le Journal de l'intervenant sur Ximi
+    api("/api/salaries/"+a.id+"/ximi-note",{method:"POST",body:JSON.stringify({texte:"Relance ("+REL_T[ty][1].toLowerCase()+") du "+fmt(d)+" - Aid'Aux Dossiers"+(c?" : "+c:"")})})
+      .then(()=>toast("Relance notée (et ajoutée au journal Ximi)")).catch(e=>{if(e.message!=="login")toast("Relance notée dans l’appli, mais pas dans Ximi : "+e.message)});
+    return}
   if(a&&t.dataset.reldel!==undefined){if(!confirm("Supprimer cette relance ?"))return;a.vie.relances.splice(+t.dataset.reldel,1);render();push(a);return}
   if(a&&t.dataset.avadd!==undefined){a.vie.avenants.unshift({date:"",c:"",signe:false});render();push(a);return}
   if(a&&t.dataset.avdel!==undefined){const i=+t.dataset.avdel;if(!confirm("Supprimer cet avenant ?"))return;a.vie.avenants.splice(i,1);render();push(a);return}
