@@ -90,6 +90,53 @@ def emails_ximi(salaries):
     return out
 
 
+# ---- Journal Ximi : chaque relance est aussi notée sur la fiche de l'intervenant ----
+_agents_cache = {"liste": None, "t": 0}
+
+
+def _agents():
+    import time
+    if _agents_cache["liste"] is None or time.time() - _agents_cache["t"] > 600:
+        _agents_cache.update(liste=ximi.get_all("api/agents"), t=time.time())
+    return _agents_cache["liste"]
+
+
+def corps_note(texte):
+    """Corps envoyé à PUT api/agents/{id}/notes (format de la doc Ximi « Ajouter une Note dans le Journal »)."""
+    return {"Content": texte}
+
+
+def noter_dans_ximi(nom_salarie, texte):
+    """Ajoute une note dans le Journal Ximi du salarié. Renvoie (ok, message) ; ne lève jamais d'erreur."""
+    try:
+        a = _correspond(nom_salarie, _agents())
+        if not a or a.get("Id") is None:
+            return False, "salarié introuvable dans Ximi"
+        ximi.put(f"api/agents/{a['Id']}/notes", corps_note(texte[:2000]))
+        return True, "noté dans Ximi"
+    except Exception as e:
+        return False, str(e)[:300]
+
+
+@bp.route("/api/salaries/<int:sid>/ximi-note", methods=["POST"])
+def api_note_ximi(sid):
+    from flask import request
+    texte = str((request.get_json(silent=True) or {}).get("texte") or "").strip()
+    if not texte:
+        return jsonify({"ok": False, "erreur": "Note vide"}), 400
+    conn = auth._conn()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT nom FROM dossiers_salaries WHERE id=%s", (sid,))
+            row = cur.fetchone()
+    finally:
+        conn.close()
+    if not row:
+        return jsonify({"ok": False, "erreur": "Salarié introuvable"}), 404
+    ok, msg = noter_dans_ximi(row["nom"], texte)
+    return jsonify({"ok": ok, "message": msg, "erreur": None if ok else msg}), (200 if ok else 502)
+
+
 @bp.route("/api/ximi/emails")
 def api_emails():
     conn = auth._conn()
