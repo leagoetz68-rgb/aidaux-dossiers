@@ -156,7 +156,7 @@ a.btn{text-decoration:none;display:inline-block}
 
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(120px);background:var(--navy);color:#fff;padding:12px 20px;border-radius:14px;font-weight:700;transition:transform .35s;z-index:20;max-width:90vw;text-align:center}
 .toast.show{transform:translateX(-50%) translateY(0)}
-#confetti{position:fixed;inset:0;pointer-events:none;z-index:15}
+#confetti{position:fixed;inset:0;pointer-events:none;z-index:90}
 
 @media (max-width:720px){
   .hero{grid-template-columns:1fr}
@@ -637,7 +637,8 @@ const catDe=p=>p.categorie==="administratif"?"administratif":"terrain";
 const ETATS=[["traiter","À traiter"],["cours","En cours"],["complet","Complet"]];
 function etatDossier(p){const pr=progress(p);
   // Complet = dossier 22/22 ET toutes les échéances à jour (aucune pastille rouge ou orange)
-  const echOk=echListe(p).every(([k,,th])=>!["vide","bad","warn"].includes(echSt(p,k,th).k));
+  // la médecine du travail ne bloque pas le « Complet » (elle reste suivie dans les échéances)
+  const echOk=echListe(p).every(([k,,th])=>k==="medecine"||!["vide","bad","warn"].includes(echSt(p,k,th).k));
   if(pr.done&&echOk&&!avARegler(p))return"complet";
   if(pr.done)return"cours";
   const rien=[...DOCS_OBL,...DOCS_SIGN].every(([k])=>p.docs[k].s==="manquant"&&!String(p.docs[k].c||"").trim())
@@ -1495,11 +1496,26 @@ document.addEventListener("keydown",ev=>{if(ev.key==="Enter"&&ev.target.id==="fN
 let tt;function toast(m){const el=document.getElementById("toast");el.textContent=m;el.classList.add("show");clearTimeout(tt);tt=setTimeout(()=>el.classList.remove("show"),3000)}
 function confetti(){
   if(matchMedia("(prefers-reduced-motion: reduce)").matches)return;
-  const cv=document.getElementById("confetti"),cx=cv.getContext("2d");
-  cv.width=innerWidth;cv.height=innerHeight;
-  const cols=["#1B2A6B","#13B3B3","#E8583A","#FFC94A"];
-  const ps=Array.from({length:160},()=>({x:innerWidth/2,y:innerHeight*.45,vx:(Math.random()-.5)*16,vy:Math.random()*-14-4,r:Math.random()*6+4,c:cols[Math.random()*4|0],a:Math.random()*6,va:(Math.random()-.5)*.3}));
-  let f=0;(function step(){cx.clearRect(0,0,cv.width,cv.height);ps.forEach(p=>{p.vy+=.35;p.vx*=.99;p.x+=p.vx;p.y+=p.vy;p.a+=p.va;cx.save();cx.translate(p.x,p.y);cx.rotate(p.a);cx.fillStyle=p.c;cx.fillRect(-p.r/2,-p.r/4,p.r,p.r/2);cx.restore()});if(++f<150)requestAnimationFrame(step);else cx.clearRect(0,0,cv.width,cv.height)})();
+  const cv=document.getElementById("confetti"),cx=cv.getContext("2d"),W=innerWidth,H=innerHeight;
+  cv.width=W;cv.height=H;
+  const cols=["#1B2A6B","#13B3B3","#E8583A","#FFC94A","#8E6CFF","#FF5FA2","#2ECC71","#FFFFFF"];
+  const ps=[];
+  // 3 explosions (centre puis les deux côtés) + deux canons dans les coins du bas + une pluie depuis le haut
+  const boum=(x,y,n,force,t)=>{for(let i=0;i<n;i++){const ang=Math.random()*Math.PI*2,v=Math.random()*force+force*.35;
+    ps.push({x,y,vx:Math.cos(ang)*v,vy:Math.sin(ang)*v-force*.5,r:Math.random()*9+5,c:cols[Math.random()*cols.length|0],a:Math.random()*6,va:(Math.random()-.5)*.4,t,forme:Math.random()<.3?"rond":Math.random()<.5?"etoile":"ruban"})}};
+  const canon=(x,dir,t)=>{for(let i=0;i<120;i++){const v=Math.random()*14+16;const ang=-Math.PI/2+dir*(Math.random()*.55+.15);
+    ps.push({x,y:H+10,vx:Math.cos(ang)*v,vy:Math.sin(ang)*v,r:Math.random()*9+5,c:cols[Math.random()*cols.length|0],a:Math.random()*6,va:(Math.random()-.5)*.4,t,forme:Math.random()<.5?"ruban":"rond"})}};
+  boum(W/2,H*.42,220,22,0);canon(0,1,4);canon(W,-1,4);boum(W*.22,H*.35,140,17,22);boum(W*.78,H*.35,140,17,30);
+  for(let i=0;i<160;i++)ps.push({x:Math.random()*W,y:-20-Math.random()*H*.5,vx:(Math.random()-.5)*3,vy:Math.random()*3+2,r:Math.random()*8+5,c:cols[Math.random()*cols.length|0],a:Math.random()*6,va:(Math.random()-.5)*.3,t:10,forme:"ruban"});
+  const etoile=(r)=>{cx.beginPath();for(let k=0;k<10;k++){const rr=k%2?r*.45:r,an=k*Math.PI/5;cx.lineTo(Math.cos(an)*rr,Math.sin(an)*rr)}cx.closePath();cx.fill()};
+  // petit flash au départ
+  let f=0;(function step(){cx.clearRect(0,0,W,H);
+    if(f<8){cx.fillStyle=`rgba(255,201,74,${.18*(1-f/8)})`;cx.fillRect(0,0,W,H)}
+    ps.forEach(p=>{if(f<p.t)return;p.vy+=.32;p.vx*=.985;p.vy*=.995;p.x+=p.vx;p.y+=p.vy;p.a+=p.va;
+      cx.save();cx.translate(p.x,p.y);cx.rotate(p.a);cx.fillStyle=p.c;
+      if(p.forme==="rond"){cx.beginPath();cx.arc(0,0,p.r/2.4,0,7);cx.fill()}else if(p.forme==="etoile")etoile(p.r/1.6);else cx.fillRect(-p.r/2,-p.r/4,p.r,p.r/2.2);
+      cx.restore()});
+    if(++f<300)requestAnimationFrame(step);else cx.clearRect(0,0,W,H)})();
 }
 if("serviceWorker" in navigator)navigator.serviceWorker.register("/sw.js").catch(()=>{});
 
