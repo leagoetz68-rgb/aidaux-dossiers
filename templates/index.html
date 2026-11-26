@@ -1181,12 +1181,12 @@ function fiche(a){
    <div class="dhead"><button class="ghost back-m" data-back>← Liste</button><div class="av">${initials(a.nom)}</div>
      <div style="flex:1;min-width:180px"><h2>${esc(a.nom)}</h2><span style="color:var(--ink2);font-size:13px">${a.embauche?"Embauché(e) le "+fmt(a.embauche):""}${a.phase==="arrivee"?" · arrivée en cours":""}</span>
        <div class="cat-switch" role="radiogroup" aria-label="Catégorie">${Object.entries(CATS).map(([c,l])=>`<button class="chip" role="radio" data-setcat="${c}" aria-checked="${catDe(a)===c}" aria-pressed="${catDe(a)===c}">${l}</button>`).join("")}</div></div>
-     <b style="font-family:'Baloo 2';font-size:22px" title="Éléments du dossier vérifiés">${p.v} / ${p.t}</b></div>
+     <div style="text-align:right"><b style="font-family:'Baloo 2';font-size:22px" title="Éléments du dossier vérifiés">${p.v} / ${p.t}</b>${avARegler(a)?`<br><small style="color:#B26A00;font-weight:700">✍️ ${a.vie.avenants.filter(x=>!x.signe).length} avenant${a.vie.avenants.filter(x=>!x.signe).length>1?"s":""} à faire signer</small>`:""}</div></div>
    <div class="prog"><i class="pv" style="width:${p.v/p.t*100}%"></i><i class="pr" style="width:${p.r/p.t*100}%"></i></div>
 
    <div class="sec"><h3>Échéances</h3><div class="pills">${pills}</div>${UI.editor&&UI.editor.id===a.id?editor(a,UI.editor.k):""}</div>
 
-   ${accHead("admin","🗂️","Dossier administratif obligatoire","Dossiers Ximi (dont avenants et entretiens)",`${p.v} / ${p.t}${p.v!==p.t&&verifie(a)?" · vérifié":""}`,p.v===p.t?"ok":verifie(a)?"warn":"bad")}
+   ${accHead("admin","🗂️","Dossier administratif obligatoire","Dossiers Ximi (dont avenants et entretiens)",`${p.v} / ${p.t}${p.v!==p.t&&verifie(a)?" · vérifié":""}${avARegler(a)?" · avenant à signer":""}`,avARegler(a)?"warn":p.v===p.t?"ok":verifie(a)?"warn":"bad")}
    <div class="acc-body" ${UI.acc.admin?"":"hidden"}><div class="sec dossier">
      <div class="dates" style="margin-bottom:6px"><label>Date du dossier<input type="date" min="2000-01-01" max="2040-12-31" data-date="dossier" value="${a.dates.dossier||""}"></label><label>Email du salarié <small>(relances titre de séjour &amp; CSS)</small><input type="email" data-email value="${esc(a.email||"")}" placeholder="prenom.nom@exemple.fr" autocomplete="off"></label></div>
      ${dossiersXimi(a,thead)}
