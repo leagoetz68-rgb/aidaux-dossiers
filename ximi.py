@@ -76,6 +76,18 @@ def put(path, body, timeout=30):
         return {}
 
 
+def post(path, body, timeout=30):
+    """POST JSON. path ex : 'api/graphql'."""
+    url = f"{BASE_URL}/{path.lstrip('/')}"
+    r = requests.post(url, headers=_headers(), json=body, timeout=timeout)
+    if r.status_code >= 400:
+        raise Exception(f"{r.status_code} {r.reason} - reponse Ximi : {r.text[:500]}")
+    try:
+        return r.json()
+    except ValueError:
+        return {"brut": r.text[:2000]}
+
+
 def get_all(path, params=None, page_size=1000):
     """Récupère toutes les pages d'une liste (Offset / Top / HasMoreRows)."""
     params = dict(params or {})
