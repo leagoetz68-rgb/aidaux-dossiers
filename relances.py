@@ -168,7 +168,7 @@ def _envoyer_outlook(destinataire, sujet, corps, bcc=None):
         raise RuntimeError(f"Outlook a refusé l'envoi ({r.status_code}) : {r.text}")
 
 
-def _envoyer_brevo(destinataire, sujet, corps, bcc=None):
+def _envoyer_brevo(destinataire, sujet, corps, bcc=None, html=None, reply_to=None):
     if not auth.BREVO_API_KEY:
         raise RuntimeError("BREVO_API_KEY non configurée")
     payload = {
@@ -177,6 +177,10 @@ def _envoyer_brevo(destinataire, sujet, corps, bcc=None):
         "subject": sujet,
         "textContent": corps,
     }
+    if html:
+        payload["htmlContent"] = html
+    if reply_to:
+        payload["replyTo"] = {"email": reply_to}
     if bcc and bcc.lower() != destinataire.lower():
         payload["bcc"] = [{"email": bcc}]
     r = auth.requests.post(
@@ -389,12 +393,67 @@ def lancer_rappels_medecine(aujourdhui=None):
 
 # ---- Historique des mails de rappel envoyés (écran « Mails envoyés ») ----
 def _libelle_palier(p):
+    if p.startswith("manuel_"):
+        return "Mail de relance (manuel)", "Documents manquants"
     doc = "Attestation CSS" if p.startswith("css_") else "Attestation CPAM" if p.startswith("cpam_") else "Médecine du travail" if p.startswith("medecine") else "Titre de séjour"
     code = p.replace("css_", "").replace("cpam_", "")
     quoi = {"relance_3m": "1re relance (3 mois avant)", "relance_1m": "2e relance (1 mois avant)",
             "alerte_15j": "Alerte interne (15 jours avant)", "medecine_7j": "Rappel du RDV (7 jours avant)",
             "medecine_15j": "Rappel du RDV (15 jours avant)", "medecine_1j": "Rappel du RDV (la veille)"}.get(code, code)
     return doc, quoi
+
+
+# ---- Mail de relance « documents manquants » envoyé à la main depuis la fiche (logo ✉️) ----
+@bp.route("/api/salaries/<int:sid>/mail-relance", methods=["POST"])
+def mail_relance(sid):
+    import datetime
+    import re
+    from flask import session
+    body = request.get_json(silent=True) or {}
+    dest = str(body.get("a") or "").strip()
+    sujet = str(body.get("sujet") or "").strip()[:200]
+    html = str(body.get("html") or "")[:50000]
+    texte = str(body.get("texte") or "").strip()[:20000]
+    docs = [str(x)[:200] for x in (body.get("docs") or [])][:30]
+    if not re.match(r"^[^\s@]+@[^\s@]+\.[^\s@]+$", dest):
+        return jsonify({"ok": False, "erreur": "Adresse mail du salarié invalide"}), 400
+    if not sujet or not texte:
+        return jsonify({"ok": False, "erreur": "Objet ou message vide"}), 400
+    conn = auth._conn()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT id, nom FROM dossiers_salaries WHERE id=%s", (sid,))
+            s = cur.fetchone()
+            if not s:
+                return jsonify({"ok": False, "erreur": "Salarié introuvable"}), 404
+            try:
+                _envoyer_brevo(dest, sujet, texte, bcc=COPIE_RH or None, html=html or None,
+                               reply_to=session.get("user_email") or None)
+            except Exception as e:
+                return jsonify({"ok": False, "erreur": f"Envoi impossible : {e}"}), 502
+            maintenant = datetime.datetime.now()
+            cur.execute(
+                """INSERT INTO dossiers_relances (salarie_id, date_validite, palier, envoye_a)
+                   VALUES (%s, %s, %s, %s) ON CONFLICT DO NOTHING""",
+                (sid, maintenant.date(), "manuel_" + maintenant.strftime("%H%M%S%f"), dest),
+            )
+            cur.execute(
+                "INSERT INTO dossiers_feed (texte, couleur, auteur) VALUES (%s, %s, %s)",
+                (f"Mail de relance (documents manquants) envoyé à {s['nom']}"[:300], "coral", session.get("user_email")),
+            )
+        conn.commit()
+    finally:
+        conn.close()
+    # Traçabilité dans le Journal Ximi du salarié (sans bloquer si Ximi ne répond pas)
+    try:
+        import ximi_emails
+        ok, msg = ximi_emails.noter_dans_ximi(
+            s["nom"],
+            f"Mail envoyé le {maintenant.strftime('%d/%m/%Y')} à {dest} – « {sujet} » (Aid'Aux Dossiers)."
+            + (f" Documents demandés : {', '.join(docs)}." if docs else ""))
+    except Exception as e:
+        ok, msg = False, str(e)
+    return jsonify({"ok": True, "ximi": ok, "ximi_msg": msg})
 
 
 @bp.route("/api/relances/historique")
