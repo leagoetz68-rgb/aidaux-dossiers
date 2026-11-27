@@ -536,7 +536,7 @@ const XIMI=[
  {n:"09_FIN DE CONTRAT",docs:[],cl:[]}];
 const DATES=[]; // les dates Digiposte (envoi, identifiant, dépôt) ne sont plus suivies
 const PIECE_T={cni:"CNI",titre:"Titre de séjour",passeport:"Passeport"};
-const ECH=[["piece","Pièce d’identité",90],["cpam","Attestation CSS",30],["medecine","Médecine du travail",60],["permis","Permis de conduire",90],["mutperso","Fin mutuelle perso",30]];
+const ECH=[["piece","Pièce d’identité",90],["cpam","Attestation CSS",30],["medecine","Médecine du travail",60],["permis","Permis de conduire",90],["mutperso","Fin mutuelle perso",30],["attcpam","Attestation CPAM (validité)",30]];
 const STATUS_NEXT={manquant:"recu",recu:"verifie",verifie:"manquant"};
 const STATUS_LAB={manquant:"Manquant",recu:"Reçu",verifie:"Vérifié",nc:"Non concerné"};
 const labelOf=k=>([...DOCS_OBL,...DOCS_SIGN].find(x=>x[0]===k)||[,k])[1];
@@ -620,7 +620,12 @@ function allerEch(ek){UI.acc.vie=true;UI.editor=null;render();
 function mutStatut(d){if(!d.mut)return;d.s=d.mut==="adhesion"||(d.mut==="dispense"&&d.just&&d.jr)?"verifie":"manquant"}
 // Adhésion à la mutuelle : l'attestation est demandée une fois, sans date de validité → pas d'échéance
 const mutAdhesion=p=>((p.docs||{}).mutuelle||{}).mut==="adhesion";
-const echListe=p=>ECH.filter(([k])=>(k!=="permis"||permisMode(p)!=="nc")&&(k!=="mutperso"||mutPerso(p))&&(k!=="cpam"||!mutAdhesion(p)));
+// justificatif de dispense choisi (css, perso, cpam, autre) ou "" si pas de dispense
+const justDisp=p=>{const m=(p.docs||{}).mutuelle||{};return m.mut==="dispense"?(m.just||""):""};
+// attestation CSS suivie : pas en cas d'adhésion, ni si la dispense est justifiée autrement (CPAM, perso, autre)
+const cssSuivie=p=>!mutAdhesion(p)&&!["cpam","perso","autre"].includes(justDisp(p));
+const cpamSuivie=p=>justDisp(p)==="cpam";
+const echListe=p=>ECH.filter(([k])=>(k!=="permis"||permisMode(p)!=="nc")&&(k!=="mutperso"||mutPerso(p))&&(k!=="cpam"||cssSuivie(p))&&(k!=="attcpam"||cpamSuivie(p)));
 const echSt=(p,k,th)=>k==="permis"&&permisMode(p)==="ancien"?{k:"ok",t:"Ancien permis",s:"sans date de validité"}:echStatus(p.ech[k],th);
 // Avenant pas encore signé : le dossier n'est pas complet
 const avARegler=p=>((p.vie||{}).avenants||[]).some(x=>!x.signe);
@@ -844,10 +849,10 @@ function ligneDoc(a,k,lab){
   const disp=k==="mutuelle"&&d.mut==="dispense"&&!nc;
   const dispense=disp?`<div class="saisine mut-disp ${d.just&&d.jr?"ok":""}">
       <span><b style="color:var(--ink)">Dispense : justificatif obligatoire</b></span>
-      <span class="mut-ch">${cb(`data-mutjust="css" aria-label="Justificatif : attestation CSS"`,d.just==="css","Attestation CSS")}${cb(`data-mutjust="perso" aria-label="Justificatif : mutuelle personnelle"`,d.just==="perso","Mutuelle personnelle")}${cb(`data-mutjust="autre" aria-label="Justificatif : autre"`,d.just==="autre","Autre")}</span>
+      <span class="mut-ch">${cb(`data-mutjust="css" aria-label="Justificatif : attestation CSS"`,d.just==="css","Attestation CSS")}${cb(`data-mutjust="perso" aria-label="Justificatif : mutuelle personnelle"`,d.just==="perso","Mutuelle personnelle")}${cb(`data-mutjust="cpam" aria-label="Justificatif : attestation CPAM"`,d.just==="cpam","CPAM")}${cb(`data-mutjust="autre" aria-label="Justificatif : autre"`,d.just==="autre","Autre")}</span>
       ${d.just?cb(`data-mutjr aria-label="Justificatif reçu"`,!!d.jr,"<b>Justificatif reçu</b>"):""}
       ${!d.just?`<small style="color:var(--bad)">Choisissez le justificatif fourni par le salarié.</small>`:!d.jr?`<small style="color:var(--bad)">Justificatif à demander au salarié.</small>`:d.just==="autre"?`<small>Précisez le justificatif dans le commentaire de la ligne Mutuelle.</small>`
-        :(()=>{const ek=d.just==="css"?"cpam":"mutperso",dt=a.ech[ek].date;return dt?`<small>Valable jusqu’au ${fmt(dt)} · <button class="lien" data-mutgo="${ek}">modifier la date</button></small>`:`<small style="color:var(--bad)">Date de validité à renseigner · <button class="lien" data-mutgo="${ek}">la saisir</button></small>`})()}
+        :(()=>{const ek=d.just==="css"?"cpam":d.just==="cpam"?"attcpam":"mutperso",dt=(a.ech[ek]||{}).date;return dt?`<small>Valable jusqu’au ${fmt(dt)} · <button class="lien" data-mutgo="${ek}">modifier la date</button></small>`:`<small style="color:var(--bad)">Date de validité à renseigner · <button class="lien" data-mutgo="${ek}">la saisir</button></small>`})()}
     </div>`:"";
   return `<div class="trow ${nc?"is-nc":""} ${d.s==="verifie"?"is-ok":""}">
     <div class="t-doc">${lab}</div>
@@ -858,8 +863,8 @@ function ligneDoc(a,k,lab){
 }
 
 // ---- « La vie du salarié » ----
-const VIE=[["css","🧾","Attestation CSS","cpam"],["medecine","🩺","Visite médecine du travail","medecine"],["mutperso","🛡️","Mutuelle personnelle","mutperso"]];
-const vieListe=a=>VIE.filter(v=>(v[0]!=="mutperso"||mutPerso(a))&&(v[0]!=="css"||!mutAdhesion(a)));
+const VIE=[["css","🧾","Attestation CSS","cpam"],["medecine","🩺","Visite médecine du travail","medecine"],["mutperso","🛡️","Mutuelle personnelle","mutperso"],["attcpam","🪪","Attestation CPAM","attcpam"]];
+const vieListe=a=>VIE.filter(v=>(v[0]!=="mutperso"||mutPerso(a))&&(v[0]!=="css"||cssSuivie(a))&&(v[0]!=="attcpam"||cpamSuivie(a)));
 VIE.forEach(v=>{v[2]=v[2]}); // libellés
 function accHead(k,ico,titre,sous,badge,st){
   const op=!!UI.acc[k];
@@ -883,8 +888,8 @@ function carteEch(a,k,ico,titre,ek){
     <div class="v-body">
       <div class="count st-${c.k}"><b>${c.n}</b><small>${c.u}</small></div>
       <div class="v-fields">
-        <label>${k==="css"?"Valable jusqu’au":k==="mutperso"?"Fin de la mutuelle (date anniversaire)":"Prochaine échéance"}<input type="date" min="2000-01-01" max="2040-12-31" data-echd="${ek}|date" value="${e.date||""}"></label>
-        ${k==="css"||k==="mutperso"?"":`<label>RDV pris le<span class="rdvrow"><input type="date" min="2000-01-01" max="2040-12-31" data-echd="${ek}|rdv" value="${e.rdv||""}" ${e.nc?"disabled":""}>${e.rdv?`<button class="x" data-vunrdv="${ek}" title="Retirer le RDV" aria-label="Retirer le RDV">×</button>`:""}</span></label>`}
+        <label>${k==="css"||k==="attcpam"?"Valable jusqu’au":k==="mutperso"?"Fin de la mutuelle (date anniversaire)":"Prochaine échéance"}<input type="date" min="2000-01-01" max="2040-12-31" data-echd="${ek}|date" value="${e.date||""}"></label>
+        ${k==="css"||k==="mutperso"||k==="attcpam"?"":`<label>RDV pris le<span class="rdvrow"><input type="date" min="2000-01-01" max="2040-12-31" data-echd="${ek}|rdv" value="${e.rdv||""}" ${e.nc?"disabled":""}>${e.rdv?`<button class="x" data-vunrdv="${ek}" title="Retirer le RDV" aria-label="Retirer le RDV">×</button>`:""}</span></label>`}
       </div>
     </div>
     <div class="v-row" style="justify-content:flex-end">
@@ -1230,7 +1235,7 @@ function relancesHTML(a){
 // Ce qui manque encore dans le dossier (documents non cochés, classeur, échéances à régler)
 function manquants(a){const l=[];
   [...DOCS_OBL,...DOCS_SIGN].forEach(([k,lab])=>{const d=a.docs[k];if(!d||d.s==="verifie"||d.s==="nc")return;
-    if(k==="mutuelle"&&d.mut==="dispense"){l.push(d.just?"Justificatif de dispense de mutuelle ("+({css:"attestation CSS",perso:"mutuelle perso",autre:"autre"}[d.just]||d.just)+")":"Justificatif de dispense de mutuelle");return}
+    if(k==="mutuelle"&&d.mut==="dispense"){l.push(d.just?"Justificatif de dispense de mutuelle ("+({css:"attestation CSS",perso:"mutuelle perso",cpam:"attestation CPAM",autre:"autre"}[d.just]||d.just)+")":"Justificatif de dispense de mutuelle");return}
     l.push(lab)});
   CLASSEUR.forEach(([k,lab])=>{if(!a.classeur[k])l.push(lab)});
   ((a.vie||{}).avenants||[]).forEach(x=>{if(!x.signe)l.push("Avenant à faire signer"+(x.date?" (du "+fmt(x.date)+")":"")+(String(x.c||"").trim()?" : "+String(x.c).trim():""))});
@@ -1494,7 +1499,7 @@ document.addEventListener("change",ev=>{
   if(t.dataset.cl){a.classeur[t.dataset.cl]=t.checked;coche=true}
   if(t.dataset.mut){const d=a.docs.mutuelle;d.mut=t.checked?t.dataset.mut:"";mutStatut(d);if(!d.mut)d.s="manquant";coche=true}
   if(t.dataset.mutjust){const d=a.docs.mutuelle;d.just=t.checked?t.dataset.mutjust:"";mutStatut(d);render();if(!checkDone(a))push(a);
-    if(d.just==="css"||d.just==="perso")allerEch(d.just==="css"?"cpam":"mutperso");return}
+    if(d.just==="css"||d.just==="perso"||d.just==="cpam")allerEch({css:"cpam",perso:"mutperso",cpam:"attcpam"}[d.just]);return}
   if(t.hasAttribute("data-mutjr")){const d=a.docs.mutuelle;d.jr=t.checked;mutStatut(d);coche=true}
   if(coche){render();if(!checkDone(a))push(a)}
 });
