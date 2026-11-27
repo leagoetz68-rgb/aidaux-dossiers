@@ -148,16 +148,20 @@ def synchro_manquants():
                              AND manquants IS DISTINCT FROM manquants_ximi""")
             for s in cur.fetchall():
                 liste, avant = s["manquants"] or [], s["manquants_ximi"]
+                if avant == "reset":  # reprise silencieuse après le changement de format : pas de note
+                    cur.execute("UPDATE dossiers_salaries SET manquants_ximi = %s WHERE id = %s", (Json(liste), s["id"]))
+                    continue
                 if not liste and not avant:  # complet et jamais signalé : rien à dire
                     cur.execute("UPDATE dossiers_salaries SET manquants_ximi = %s WHERE id = %s", (Json(liste), s["id"]))
                     continue
+                # Ximi n'affiche pas les retours à la ligne : note sur une ligne, éléments séparés par des virgules
+                recus = [x for x in (avant or []) if x not in liste]
                 if liste:
-                    texte = f"Suivi du dossier salarié – Aid'Aux Dossiers ({jour})\nÉléments manquants :\n" + "\n".join(f"- {x}" for x in liste)
-                    recus = [x for x in (avant or []) if x not in liste]
+                    texte = f"Documents d'embauche – Aid'Aux Dossiers ({jour}). Manquants : {', '.join(liste)}."
                     if recus:
-                        texte += "\n\nReçu / réglé depuis la dernière note :\n" + "\n".join(f"- {x}" for x in recus)
+                        texte += f" Reçus depuis la dernière note : {', '.join(recus)}."
                 else:
-                    texte = f"Suivi du dossier salarié – Aid'Aux Dossiers ({jour})\nDossier complet : tous les éléments ont été reçus."
+                    texte = f"Documents d'embauche – Aid'Aux Dossiers ({jour}). Tous les documents ont été reçus."
                 ok, msg = noter_dans_ximi(s["nom"], texte)
                 if ok:
                     res["notes"] += 1
