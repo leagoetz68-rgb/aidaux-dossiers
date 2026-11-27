@@ -170,11 +170,16 @@ a.btn{text-decoration:none;display:inline-block}
 .li-search input{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font:inherit;background:var(--card);color:var(--ink)}
 .cat-badge{display:inline-block;vertical-align:middle;font-family:inherit;font-size:10.5px;font-weight:700;letter-spacing:.02em;padding:1px 7px;border-radius:999px;margin-left:4px}
 .cat-badge.administratif{background:#EDE7FF;color:#5B3FB8}
-.mail-box{max-width:820px}
-.mail-f{display:flex;flex-direction:column;gap:8px;padding:14px 18px;overflow:auto}
+.mail-box{max-width:820px;max-height:92vh}
+.mail-f{display:flex;flex-direction:column;gap:8px;padding:14px 18px 0;overflow:auto;min-height:0}
+.mail-f>*{flex-shrink:0}
+.mail-pied{position:sticky;bottom:0;background:var(--card);padding:10px 0 14px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;align-items:center}
+.ico-mail{vertical-align:-3px;flex:none}
+.rdv-h h3 .ico-mail{width:20px;height:20px;color:var(--teal-ink);margin-right:4px}
+.li-mail{color:var(--ink2)}.li-mail:hover{color:var(--teal-ink)}
 .mail-f label{display:flex;flex-direction:column;gap:3px;font-size:12.5px;font-weight:700;color:var(--ink2)}
 .mail-f input{border:1px solid var(--line);border-radius:8px;padding:7px 10px;font:inherit;font-size:14px;font-weight:400;background:var(--bg);color:var(--ink)}
-.mail-corps{border:1px solid var(--line);border-radius:10px;padding:12px 16px;min-height:260px;background:#fff;color:#222;font-family:Verdana,Arial,sans-serif;font-size:14px;line-height:1.45;outline:none}
+.mail-corps{border:1px solid var(--line);border-radius:10px;padding:12px 16px;min-height:260px;height:auto;background:#fff;color:#222;font-family:Verdana,Arial,sans-serif;font-size:14px;line-height:1.45;outline:none}
 .mail-corps:focus{border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-soft)}
 .mail-corps p{margin:0 0 10px}.mail-corps ul{margin:0 0 10px;padding-left:26px}
 .mail-warn{margin:0;font-size:13px;color:#B26A00}
@@ -493,7 +498,7 @@ textarea.fm-in{resize:vertical;min-height:48px;overflow:hidden;display:block}
       <p id="today"></p>
     </div>
     <span class="who-me">{{ user_email }}</span>
-    <button class="btn light" id="impBtn" title="Récupérer les emails des salariés depuis Ximi">📥 Emails Ximi</button><button class="btn light" id="mailsBtn" title="Historique de tous les mails de rappel envoyés">📨 Mails envoyés</button><button class="btn light" id="xjBtn" title="Noter maintenant dans le Journal Ximi ce qui manque (sinon c’est fait automatiquement chaque matin)">🔄 Journal Ximi</button><input type="file" id="impFile" accept=".xlsx,.xls,.csv" hidden>
+    <button class="btn light" id="impBtn" title="Récupérer les emails des salariés depuis Ximi">📥 Emails Ximi</button><button class="btn light" id="mailsBtn" title="Historique de tous les mails de rappel envoyés"><svg class="ico-mail" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 6.5l8.5 6.5 8.5-6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Mails envoyés</button><button class="btn light" id="xjBtn" title="Noter maintenant dans le Journal Ximi ce qui manque (sinon c’est fait automatiquement chaque matin)">🔄 Journal Ximi</button><input type="file" id="impFile" accept=".xlsx,.xls,.csv" hidden>
     <button class="btn teal" id="addBtn">+ Ajouter un salarié</button>
     <a class="ghost" href="/logout">Se déconnecter</a>
   </div>
@@ -798,7 +803,7 @@ function itemListe(p){
   return `<div class="li-row"><button class="li ${act?"active":""}" data-open="${p.id}" aria-current="${act}">
     <div class="av">${initials(p.nom)}</div>
     <div class="li-t"><b>${esc(p.nom)}${estAdmin(p)?" "+badgeCat(p):""}</b><span>${p.embauche?"Embauché(e) le "+fmt(p.embauche):"&nbsp;"}${(()=>{const r=!pr.done&&derniereRel(p);return r?" · relancé(e) le "+fmt(r.d)+" ("+(REL_T[r.t]||REL_T.mail)[1].toLowerCase()+")":""})()}</span>
-      <div class="li-m"><span class="dots">${dots}</span><span class="mini"><i style="width:${pr.v/pr.t*100}%"></i></span><small>${pr.v}/${pr.t}</small></div></div></button><button class="li-x li-mail" data-mailrel="${p.id}" title="Envoyer un mail de relance à ${esc(p.nom)}" aria-label="Mail de relance à ${esc(p.nom)}">✉️</button><button class="li-x li-arch" data-archiver="${p.id}" title="Archiver ${esc(p.nom)} (a quitté AID’Aux)" aria-label="Archiver ${esc(p.nom)}">🗄</button><button class="li-x" data-retirer="${p.id}" title="Supprimer ${esc(p.nom)}" aria-label="Supprimer ${esc(p.nom)}">×</button></div>`;
+      <div class="li-m"><span class="dots">${dots}</span><span class="mini"><i style="width:${pr.v/pr.t*100}%"></i></span><small>${pr.v}/${pr.t}</small></div></div></button><button class="li-x li-mail" data-mailrel="${p.id}" title="Envoyer un mail de relance à ${esc(p.nom)}" aria-label="Mail de relance à ${esc(p.nom)}">${ICO_MAIL}</button><button class="li-x li-arch" data-archiver="${p.id}" title="Archiver ${esc(p.nom)} (a quitté AID’Aux)" aria-label="Archiver ${esc(p.nom)}">🗄</button><button class="li-x" data-retirer="${p.id}" title="Supprimer ${esc(p.nom)}" aria-label="Supprimer ${esc(p.nom)}">×</button></div>`;
 }
 function listeHTML(l,vide){
   if(l.length)return l.map(itemListe).join("");
@@ -1206,7 +1211,7 @@ function fiche(a){
   return `<div class="detail">
    <div class="dhead"><button class="ghost back-m" data-back>← Liste</button><div class="av">${initials(a.nom)}</div>
      <div style="flex:1;min-width:180px"><h2>${esc(a.nom)}</h2><span style="color:var(--ink2);font-size:13px">${a.embauche?"Embauché(e) le "+fmt(a.embauche):""}${a.phase==="arrivee"?" · arrivée en cours":""}</span>
-       <button class="btn light mail-btn" data-mailrel="${a.id}" title="Envoyer un mail de relance au salarié">✉️ Mail de relance</button>
+       <button class="btn light mail-btn" data-mailrel="${a.id}" title="Envoyer un mail de relance au salarié">${ICO_MAIL} Mail de relance</button>
        <div class="cat-switch" role="radiogroup" aria-label="Catégorie">${Object.entries(CATS).map(([c,l])=>`<button class="chip" role="radio" data-setcat="${c}" aria-checked="${catDe(a)===c}" aria-pressed="${catDe(a)===c}">${l}</button>`).join("")}</div></div>
      <div style="text-align:right"><b style="font-family:'Baloo 2';font-size:22px" title="Éléments du dossier vérifiés">${p.v} / ${p.t}</b>${avARegler(a)?`<br><small style="color:#B26A00;font-weight:700">✍️ ${a.vie.avenants.filter(x=>!x.signe).length} avenant${a.vie.avenants.filter(x=>!x.signe).length>1?"s":""} à faire signer</small>`:""}</div></div>
    <div class="prog"><i class="pv" style="width:${p.v/p.t*100}%"></i><i class="pr" style="width:${p.r/p.t*100}%"></i></div>
@@ -1950,14 +1955,14 @@ async function ouvrirMails(){
   let el=document.getElementById("rdvPanel");
   if(!el){el=document.createElement("div");el.id="rdvPanel";el.className="rdv-ov";document.body.appendChild(el)}
   el.hidden=false;document.body.classList.add("fm-open");
-  if(!MAILS){el.innerHTML=`<div class="rdv-box"><div class="rdv-h"><h3>📨 Mails envoyés</h3><button class="btn light" data-rdvclose>Fermer</button></div><div class="empty small">Chargement…</div></div>`;
+  if(!MAILS){el.innerHTML=`<div class="rdv-box"><div class="rdv-h"><h3>Mails envoyés</h3><button class="btn light" data-rdvclose>Fermer</button></div><div class="empty small">Chargement…</div></div>`;
     try{MAILS=(await api("/api/relances/historique")).lignes||[]}catch(e){if(e.message!=="login")toast("Historique indisponible : "+e.message);fermerRdv();return}}
   dessinerMails()}
 function dessinerMails(){const el=document.getElementById("rdvPanel");if(!el||el.hidden)return;
   const types=["tous",...new Set(MAILS.map(m=>m.doc))];
   const l=MAILS.filter(m=>(MAILS_F==="tous"||m.doc===MAILS_F)&&(!MAILS_Q||sansAcc(m.nom+" "+m.a).includes(sansAcc(MAILS_Q).trim())));
   el.innerHTML=`<div class="rdv-box" role="dialog" aria-modal="true" aria-label="Mails envoyés">
-    <div class="rdv-h"><h3>📨 Mails de rappel envoyés (${l.length})</h3><button class="btn light" data-rdvclose>Fermer</button></div>
+    <div class="rdv-h"><h3>${ICO_MAIL} Mails de rappel envoyés (${l.length})</h3><button class="btn light" data-rdvclose>Fermer</button></div>
     <div class="todo-f"><input type="search" id="mailsQ" class="mails-q" placeholder="🔍 Rechercher un salarié ou une adresse…" value="${esc(MAILS_Q)}">
       ${types.map(t=>`<button class="chip" data-mailsf="${esc(t)}" aria-pressed="${MAILS_F===t}">${t==="tous"?"Tous":esc(t)} (${t==="tous"?MAILS.length:MAILS.filter(m=>m.doc===t).length})</button>`).join("")}</div>
     <div class="rdv-list">${l.length?l.map(m=>`<button class="rdv-li" data-rdvopen="${m.sid}">
@@ -1971,6 +1976,7 @@ document.addEventListener("click",ev=>{const t=ev.target.closest&&ev.target.clos
 document.addEventListener("input",ev=>{if(ev.target.id!=="mailsQ")return;MAILS_Q=ev.target.value;dessinerMails()});
 // ======== Mail de relance « documents manquants » (logo ✉️) ========
 // formulation de chaque document dans le mail (ordre du modèle AID'AUX)
+const ICO_MAIL=`<svg class="ico-mail" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 6.5l8.5 6.5 8.5-6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 const MAIL_DOCS=[
  ["piece","copie de votre pièce d'identité en cours de validité (carte nationale d'identité, passeport, titre de séjour)"],
  ["vitale","copie de votre carte vitale"],
@@ -2002,7 +2008,7 @@ function ouvrirMail(id){const a=find(id)||find(+id)||find(String(id));if(!a)retu
   let el=document.getElementById("rdvPanel");
   if(!el){el=document.createElement("div");el.id="rdvPanel";el.className="rdv-ov";document.body.appendChild(el)}
   el.innerHTML=`<div class="rdv-box mail-box" role="dialog" aria-modal="true" aria-label="Mail de relance">
-    <div class="rdv-h"><h3>✉️ Mail de relance – ${esc(a.nom)}</h3><button class="btn light" data-rdvclose>Fermer</button></div>
+    <div class="rdv-h"><h3>${ICO_MAIL} Mail de relance – ${esc(a.nom)}</h3><button class="btn light" data-rdvclose>Fermer</button></div>
     <div class="mail-f">
       ${l.length?"":`<p class="mail-warn">✅ Aucun document ne manque dans le dossier de ${esc(prenomDe(a.nom))}. Vous pouvez quand même écrire un message.</p>`}
       <label>À<input type="email" id="mlA" value="${esc(a.email||"")}" placeholder="adresse mail du salarié"></label>
@@ -2010,8 +2016,8 @@ function ouvrirMail(id){const a=find(id)||find(+id)||find(String(id));if(!a)retu
       <label>Objet<input id="mlS" value="AID'AUX - Votre dossier salarié"></label>
       <label>Message <small>(modifiable : cliquez dans le texte)</small></label>
       <div id="mlB" class="mail-corps" contenteditable="true">${corpsMail(a)}</div>
-      <p class="note rel-aide">Envoyé via Brevo · copie à la RH · l’envoi est noté dans le Journal Ximi du salarié, dans « Suivi des relances » et dans « 📨 Mails envoyés ». Les réponses du salarié arriveront dans votre boîte mail.</p>
-      <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn light" data-rdvclose>Annuler</button><button class="btn teal" id="mlGo" data-mlid="${a.id}">📨 Envoyer</button></div>
+      <p class="note rel-aide">Envoyé via Brevo · copie à la RH · l’envoi est noté dans le Journal Ximi du salarié, dans « Suivi des relances » et dans « Mails envoyés ». Les réponses du salarié arriveront dans votre boîte mail.</p>
+      <div class="mail-pied"><button class="btn light" data-rdvclose>Annuler</button><button class="btn teal" id="mlGo" data-mlid="${a.id}">${ICO_MAIL} Envoyer</button></div>
     </div></div>`;
   el.hidden=false;document.body.classList.add("fm-open")}
 async function envoyerMail(btn){const a=find(btn.dataset.mlid)||find(+btn.dataset.mlid);if(!a)return;
@@ -2026,7 +2032,7 @@ async function envoyerMail(btn){const a=find(btn.dataset.mlid)||find(+btn.datase
     a.vie.relances.push({d:iso(new Date()),t:"mail",c:"Mail de relance envoyé (documents manquants)"+(docs.length?" : "+docs.join(", "):"")});
     push(a);fermerRdv();render();
     toast("Mail envoyé à "+prenomDe(a.nom)+(j.ximi?" · noté dans le Journal Ximi":" · pas noté dans Ximi ("+(j.ximi_msg||"erreur")+")"))}
-  catch(e){if(e.message!=="login")toast(e.message);btn.disabled=false;btn.textContent="📨 Envoyer"}}
+  catch(e){if(e.message!=="login")toast(e.message);btn.disabled=false;btn.innerHTML=ICO_MAIL+" Envoyer"}}
 document.addEventListener("click",ev=>{const t=ev.target.closest&&ev.target.closest("[data-mailrel],#mlGo");if(!t)return;ev.stopPropagation();
   if(t.id==="mlGo")envoyerMail(t);else ouvrirMail(t.dataset.mailrel)},true);
 render();load();
