@@ -1471,6 +1471,9 @@ document.addEventListener("click",async ev=>{
 function horsBornes(t){return (t.min&&t.value<t.min)||(t.max&&t.value>t.max)}
 document.addEventListener("keydown",ev=>{const t=ev.target;if(t.type==="date"){
   if(ev.key==="Enter"){t.blur();return}t.dataset.saisie="1"}},true);
+// Avenant : dès que la date est complète (année à 4 chiffres), on passe tout seul au champ « Objet »
+document.addEventListener("input",ev=>{const t=ev.target;if(t.type!=="date"||!/\|date$/.test(t.dataset.av||""))return;
+  if(t.value&&t.value.slice(0,4)>="2000"&&!horsBornes(t))setTimeout(()=>{if(document.activeElement===t)t.blur()},0)},true);
 document.addEventListener("focusout",ev=>{const t=ev.target;if(t.type!=="date"||!t.dataset.saisie)return;
   delete t.dataset.saisie;
   if(t.value&&horsBornes(t)){toast("Année impossible : choisissez entre "+t.min.slice(0,4)+" et "+t.max.slice(0,4));return}
@@ -1504,7 +1507,10 @@ document.addEventListener("change",ev=>{
     let news=null;const l=ECH.find(x=>x[0]===k)[1];
     if(f==="rdv"&&t.value)news={txt:"RDV "+l.toLowerCase()+" pour "+a.nom+" le "+fmt(t.value),c:"coral"};
     render();push(a,news);return}
-  if(t.dataset.av){const [i,f]=t.dataset.av.split("|"),av=a.vie.avenants[+i];if(!av)return;av[f]=f==="signe"?t.checked:t.value;render();push(a);return}
+  if(t.dataset.av){const [i,f]=t.dataset.av.split("|"),av=a.vie.avenants[+i];if(!av)return;av[f]=f==="signe"?t.checked:t.value;render();push(a);
+    // date saisie → le curseur passe directement dans « Objet » du même avenant (pas besoin de la souris)
+    if(f==="date"&&t.value){const j=a.vie.avenants.indexOf(av),c=document.querySelector(`[data-av="${j}|c"]`);if(c){c.focus();c.setSelectionRange(c.value.length,c.value.length)}}
+    return}
   if(t.hasAttribute("data-embauche")){a.embauche=t.value;render();push(a);toast(t.value?"Date d’embauche enregistrée":"Date d’embauche retirée");return}
   if(t.hasAttribute("data-saisine")){a.docs.piece.saisine=t.value;render();push(a);toast(t.value?"Date de saisine enregistrée":"Date de saisine retirée");return}
   if(t.hasAttribute("data-email")){a.email=t.value.trim();push(a);toast("Email enregistré");return}
