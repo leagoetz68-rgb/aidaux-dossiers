@@ -82,8 +82,16 @@ def _noter_relance(cur, salarie_id, jour, commentaire):
 def _attestation_perimable(docs):
     """Adhésion à la mutuelle : attestation demandée une seule fois, sans date de validité (pas de relance).
     Dispense (CSS, mutuelle perso, autre) ou choix pas encore fait : elle expire et doit être redemandée."""
-    mut = ((docs or {}).get("mutuelle") or {}).get("mut")
-    return mut != "adhesion"
+    m = (docs or {}).get("mutuelle") or {}
+    if m.get("mut") == "adhesion":
+        return False
+    # dispense justifiée par autre chose que la CSS (CPAM, mutuelle perso, autre) : pas d'attestation CSS à suivre
+    return not (m.get("mut") == "dispense" and m.get("just") in ("cpam", "perso", "autre"))
+
+
+def _justif_dispense(docs):
+    m = (docs or {}).get("mutuelle") or {}
+    return m.get("just") if m.get("mut") == "dispense" else None
 
 
 def _a_un_titre_de_sejour(docs):
@@ -109,6 +117,12 @@ DOCUMENTS = [
      "faire": "demander son renouvellement auprès de votre CPAM (ameli.fr)",
      "fin": "",
      "point": "demande de renouvellement, nouvelle attestation"},
+    {"ech": "attcpam", "prefixe": "cpam_", "nom": "attestation CPAM", "votre": "votre attestation CPAM (droits à l'assurance maladie)",
+     "le": "l'attestation CPAM", "nouveau": "votre nouvelle attestation CPAM",
+     "Alerte": "Alerte attestation CPAM", "suivi": lambda docs: _justif_dispense(docs) == "cpam",
+     "faire": "la télécharger à nouveau sur votre compte ameli.fr",
+     "fin": "",
+     "point": "nouvelle attestation"},
 ]
 
 
@@ -385,8 +399,8 @@ def lancer_rappels_medecine(aujourdhui=None):
 
 # ---- Historique des mails de rappel envoyés (écran « Mails envoyés ») ----
 def _libelle_palier(p):
-    doc = "Attestation CSS" if p.startswith("css_") else "Médecine du travail" if p.startswith("medecine") else "Titre de séjour"
-    code = p.replace("css_", "")
+    doc = "Attestation CSS" if p.startswith("css_") else "Attestation CPAM" if p.startswith("cpam_") else "Médecine du travail" if p.startswith("medecine") else "Titre de séjour"
+    code = p.replace("css_", "").replace("cpam_", "")
     quoi = {"relance_3m": "1re relance (3 mois avant)", "relance_1m": "2e relance (1 mois avant)",
             "alerte_15j": "Alerte interne (15 jours avant)", "medecine_7j": "Rappel du RDV (7 jours avant)",
             "medecine_15j": "Rappel du RDV (15 jours avant)", "medecine_1j": "Rappel du RDV (la veille)"}.get(code, code)
