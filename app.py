@@ -105,6 +105,13 @@ def init_db():
             # Éléments manquants (calculés par l'appli) et dernière liste notée dans le Journal Ximi
             cur.execute("ALTER TABLE dossiers_salaries ADD COLUMN IF NOT EXISTS manquants JSONB")
             cur.execute("ALTER TABLE dossiers_salaries ADD COLUMN IF NOT EXISTS manquants_ximi JSONB")
+            # Une fois : la note Ximi ne parle plus que des documents d'embauche (dossier 02).
+            # On repart de zéro sans renvoyer de note à tout le monde ("reset" = reprise silencieuse).
+            cur.execute("CREATE TABLE IF NOT EXISTS dossiers_meta (cle TEXT PRIMARY KEY)")
+            cur.execute("INSERT INTO dossiers_meta (cle) VALUES ('ximi_docs02_v1') ON CONFLICT DO NOTHING")
+            if cur.rowcount:
+                cur.execute("""UPDATE dossiers_salaries SET manquants = NULL,
+                               manquants_ximi = CASE WHEN manquants_ximi IS NULL THEN NULL ELSE '"reset"'::jsonb END""")
             # Catégorie : 'terrain' ou 'administratif' (NULL = pas encore classé)
             cur.execute("ALTER TABLE dossiers_salaries ADD COLUMN IF NOT EXISTS categorie TEXT")
             _classer_categories(cur)
