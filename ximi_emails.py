@@ -236,3 +236,19 @@ def remplir_emails_vides():
         return len(lignes)
     finally:
         conn.close()
+
+
+# Diagnostic : la doc REST de Ximi n'a aucune fonction pour créer un email sur un intervenant.
+# Cette page interroge la partie GraphQL de Ximi pour voir si une "mutation" le permet.
+@bp.route("/api/ximi/diagnostic-emails")
+def api_diag_emails():
+    q = "{ __schema { mutationType { fields { name description args { name } } } } }"
+    try:
+        data = ximi.post("api/graphql", {"Query": q})
+    except Exception as e:
+        return jsonify({"ok": False, "etape": "graphql", "erreur": str(e)}), 502
+    champs = (((data.get("data") or {}).get("__schema") or {}).get("mutationType") or {}).get("fields") or []
+    mots = ("mail", "message", "note", "agent", "communication")
+    utiles = [c for c in champs if any(m in (c.get("name") or "").lower() for m in mots)]
+    return jsonify({"ok": True, "nb_mutations": len(champs), "pistes": utiles,
+                    "toutes": [c.get("name") for c in champs], "brut_si_vide": None if champs else data})
